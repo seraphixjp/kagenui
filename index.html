@@ -1,0 +1,1053 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a0c10">
+<title>カゲヌイ モバイル</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="カゲヌイ">
+<script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js" defer></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a0c10; --card:#11151d; --card2:#161b25; --line:#212835;
+  --tx:#e6e8ec; --sub:#8b93a3; --dim:#5a6273;
+  --kg:#5eead4; --kg2:rgba(94,234,212,.12);
+  --cb:#3b82f6; --gm:#ff7a1a; --ok:#4ade80; --neg:#f87171; --warn:#fbbf24; --bo:#c084fc;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--tx);font-family:"Noto Sans JP",system-ui,sans-serif;font-size:14px}
+body{padding-bottom:calc(72px + env(safe-area-inset-bottom))}
+.wrap{max-width:620px;margin:0 auto}
+.num{font-family:"Rajdhani","Noto Sans JP",sans-serif;font-weight:600;font-variant-numeric:tabular-nums}
+header{position:sticky;top:0;z-index:5;background:rgba(10,12,16,.93);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--line);padding:10px 16px}
+.brand{display:flex;align-items:center;gap:10px}
+.logo{width:28px;height:28px;flex:none}
+.brand h1{margin:0;font-family:"Rajdhani";font-weight:700;font-size:19px;letter-spacing:.12em;white-space:nowrap}
+.brand h1 small{font-weight:600;font-size:11px;letter-spacing:.08em;color:var(--sub);margin-left:6px}
+.stamp{margin-left:auto;text-align:right;font-size:10px;white-space:nowrap;color:var(--sub);line-height:1.4}
+.stamp .ld{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:4px;vertical-align:0}
+.reload{background:none;border:1px solid var(--line);color:var(--sub);border-radius:8px;width:32px;height:32px;font-size:16px;margin-left:8px;flex:none}
+.reload.spin{animation:sp 1s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+main{padding:12px 16px}
+.view{display:none}.view.on{display:block}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:13px;margin-bottom:12px}
+.sum{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
+.sum button{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:9px 4px 8px;color:var(--tx);font-family:inherit;text-align:center}
+.sum button.on{border-color:var(--kg);background:var(--kg2)}
+.sum .v{font-size:24px;line-height:1.1}
+.sum .l{font-size:10.5px;color:var(--sub);margin-top:2px}
+.search{width:100%;background:var(--card);border:1px solid var(--line);color:var(--tx);border-radius:10px;padding:10px 12px;font-size:14px;margin-bottom:8px;font-family:inherit}
+.chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;margin-bottom:6px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chips button{flex:none;background:var(--card);border:1px solid var(--line);color:var(--sub);border-radius:16px;padding:5px 11px;font-family:inherit;font-size:12px}
+.chips button.on{border-color:var(--kg);color:var(--kg);background:var(--kg2)}
+.it{display:flex;gap:10px;align-items:center;background:var(--card);border:1px solid var(--line);border-left:3px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:7px}
+.it.cb{border-left-color:var(--cb)}.it.gm{border-left-color:var(--gm)}
+.it .l{flex:1;min-width:0}
+.it .nm{font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.it .sk{font-size:11px;color:var(--sub);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.it .st{display:flex;gap:10px;font-size:11.5px;color:var(--sub);margin-top:4px;flex-wrap:wrap}
+.it .st b{font-family:Rajdhani;font-weight:600;font-size:14px;color:var(--tx);margin-left:2px}
+.it .st .cbx b{color:#93c5fd}.it .st .gmx b{color:#fdba74}
+.it .st .bo b,.it .st .bo{color:var(--neg)}
+.it .st .un b,.it .st .un{color:var(--warn)}
+.it .r{text-align:center;flex:none;min-width:52px}
+.it .r .v{font-size:28px;line-height:1}
+.it .r .c{font-size:10px;color:var(--sub);margin-top:2px}
+.z0{color:var(--dim)}.zl{color:var(--warn)}.zn{color:var(--neg)}.zp{color:var(--kg)}
+.sec{font-size:12px;color:var(--sub);letter-spacing:.08em;margin:16px 2px 8px;display:flex;align-items:center;gap:8px}
+.sec:after{content:"";flex:1;height:1px;background:var(--line)}
+.row{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:7px}
+.row.bad{border-color:rgba(248,113,113,.45)}
+.row.wait{border-color:rgba(251,191,36,.4)}
+.row .t{font-size:11.5px;color:var(--sub);display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.row .n{margin-top:3px;font-size:13.5px}
+.row .m{font-size:11.5px;color:var(--sub);margin-top:3px;word-break:break-all}
+.row .q{float:right;font-size:20px;margin-left:8px}
+.tag{font-size:10.5px;border-radius:5px;padding:1px 6px;border:1px solid var(--line);color:var(--sub)}
+.tag.cb{color:#93c5fd;border-color:rgba(59,130,246,.45)}
+.tag.gm{color:#fdba74;border-color:rgba(255,122,26,.45)}
+.tag.ok{color:var(--ok);border-color:rgba(74,222,128,.4)}
+.tag.ng{color:var(--neg);border-color:rgba(248,113,113,.45)}
+.tag.wt{color:var(--warn);border-color:rgba(251,191,36,.45)}
+.tag.kg{color:var(--kg);border-color:rgba(94,234,212,.4)}
+.health{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px}
+.health>div{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:9px 10px}
+.health .v{font-size:16px;margin-top:2px}
+.health .l{font-size:10.5px;color:var(--sub)}
+.ln{display:flex;gap:8px;align-items:baseline;padding:5px 0;border-top:1px dashed var(--line);font-size:13px}
+.row .ln:first-of-type{margin-top:6px}
+.lq{color:var(--kg);font-size:16px;min-width:28px}
+.lnm{flex:1;min-width:0}
+.lsk{display:block;font-size:11px;color:var(--sub)}
+.lop{display:inline-block;margin:3px 0 1px;font-size:12px;color:#fde68a;background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.35);border-radius:6px;padding:1px 7px}
+.pick .ln:first-child{border-top:none}
+.ord{position:relative;background:var(--card);border:1px solid var(--line);border-left:4px solid var(--line);border-radius:12px;padding:11px 12px 9px 52px;margin-bottom:8px}
+.ord.gm{border-left-color:var(--gm)}.ord.cb{border-left-color:var(--cb)}.ord.bo{border-left-color:var(--bo)}
+.ord.bad{border-color:rgba(248,113,113,.5);border-left-color:var(--neg)}
+.ord.done{opacity:.45}
+.ord.nock{padding-left:14px}
+.ck{position:absolute;left:12px;top:13px;width:28px;height:28px;border-radius:8px;border:2px solid var(--gm);color:#0a0c10;font-weight:700;font-size:16px;display:flex;align-items:center;justify-content:center}
+.ord.bo .ck{border-color:var(--bo)}
+.ord.done .ck,.ord.packed .ck{background:var(--ok);border-color:var(--ok)}
+.oh{display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:11.5px;color:var(--sub)}
+.oh .no{font-family:Rajdhani;font-weight:700;font-size:16px;color:var(--tx)}
+.who{font-size:12.5px;color:var(--sub);margin-top:2px}
+.ord .ln{margin-top:6px;font-size:13.5px}
+.ord .lq,.pick .lq{font-family:Rajdhani;font-weight:700;font-size:18px;min-width:30px}
+.tag.bo{color:var(--bo);border-color:rgba(192,132,252,.45)}
+.prog{height:6px;border-radius:3px;background:var(--card2);overflow:hidden;margin-top:8px}
+.prog i{display:block;height:100%;background:var(--ok)}
+.bosku{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--bo);border-radius:12px;padding:11px 12px;margin-bottom:9px}
+.bosku.bad{border-left-color:var(--neg)}
+.bosku .top{display:flex;gap:10px;align-items:flex-start}
+.bosku .nm{flex:1;min-width:0;font-size:13.5px}
+.bosku .nm small{display:block;color:var(--sub);font-size:11px;margin-top:1px}
+.bosku .q{text-align:right;flex:none}
+.bosku .q .v{font-size:24px;line-height:1;color:var(--bo)}
+.bosku .q .c{font-size:10px;color:var(--sub)}
+.bosku .meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.bolist{display:none}
+.bosku.open .bolist{display:block}
+.bl{display:flex;gap:8px;align-items:center;font-size:12px;padding:6px 0 0;border-top:1px dashed var(--line);margin-top:7px;flex-wrap:wrap}
+.bl .no{font-family:Rajdhani;font-weight:700;font-size:14px}
+.bl .w{color:var(--sub);flex:1;min-width:80px}
+.alert{background:rgba(251,191,36,.07);border:1px solid rgba(251,191,36,.3);border-radius:12px;padding:10px 12px;margin-bottom:8px;font-size:12.5px}
+.empty{color:var(--dim);text-align:center;padding:26px 0}
+.foot{color:var(--dim);font-size:11px;line-height:1.6;margin:14px 2px}
+.btn{display:block;text-align:center;background:var(--kg2);border:1px solid rgba(94,234,212,.4);color:var(--kg);border-radius:12px;padding:11px;text-decoration:none;font-size:13px;margin-top:6px}
+nav{position:fixed;left:0;right:0;bottom:0;z-index:6;background:rgba(13,16,22,.96);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+nav .wrap{display:flex}
+nav button{flex:1;background:none;border:none;color:var(--dim);padding:9px 0 8px;font-family:inherit;font-size:10.5px;display:flex;flex-direction:column;align-items:center;gap:3px;position:relative}
+nav button svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+nav button.on{color:var(--kg)}
+nav .badge{position:absolute;top:4px;left:calc(50% + 6px);background:var(--neg);color:#fff;border-radius:8px;font-size:9.5px;min-width:16px;padding:0 4px;line-height:15px;font-family:Rajdhani;font-weight:700}
+.sendrow{display:flex;justify-content:flex-end;margin-top:8px}
+.sendbtn{background:var(--kg2);border:1px solid rgba(94,234,212,.45);color:var(--kg);border-radius:9px;padding:7px 14px;font-family:inherit;font-size:13px;font-weight:700}
+.sendbtn:disabled{background:none;border-color:var(--line);color:var(--dim);font-weight:400;font-size:12px}
+.sm{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.6);display:flex;align-items:flex-end;justify-content:center}
+.sm.hidden{display:none}
+.smbox{background:var(--card);border:1px solid var(--line);border-radius:18px 18px 0 0;width:100%;max-width:620px;max-height:92vh;overflow:auto;padding:14px 16px calc(16px + env(safe-area-inset-bottom))}
+.smh{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:700;margin-bottom:2px}
+.smh .no{font-family:Rajdhani;font-size:20px}
+.smx{margin-left:auto;background:none;border:none;color:var(--sub);font-size:26px;line-height:1}
+.lbl2{font-size:11.5px;color:var(--sub);margin:6px 0 6px}
+.chk{display:flex;gap:10px;align-items:flex-start;background:var(--card2);border-radius:10px;padding:9px 10px;margin-bottom:6px;font-size:13.5px}
+.chk input{width:20px;height:20px;margin:1px 0 0;accent-color:#5eead4;flex:none}
+.bigbtn{display:block;width:100%;background:var(--kg);color:#0a0c10;border:none;border-radius:12px;padding:14px;font-family:inherit;font-size:15px;font-weight:700}
+.trin{display:block;width:100%;margin-top:8px;background:var(--card2);border:1px solid var(--line);color:var(--tx);border-radius:10px;padding:12px;font-family:Rajdhani,monospace;font-size:22px;letter-spacing:.08em;text-align:center}
+.trst{min-height:20px;font-size:12.5px;text-align:center;margin-top:6px}
+.smmsg{background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.35);color:#fecaca;border-radius:10px;padding:9px 11px;font-size:12.5px;margin-top:8px}
+.smbtns{display:flex;gap:10px;margin-top:14px}
+.smbtns button{flex:1;background:var(--card2);border:1px solid var(--line);color:var(--tx);border-radius:12px;padding:13px;font-family:inherit;font-size:14px}
+.smbtns button.pri{background:var(--kg);border-color:var(--kg);color:#0a0c10;font-weight:700}
+.smbtns button:disabled{opacity:.35}
+.trbig{text-align:center;font-size:30px;letter-spacing:.06em;margin:6px 0 0;color:var(--kg)}
+.cfl{display:flex;gap:10px;align-items:baseline;padding:8px 0;border-top:1px dashed var(--line);font-size:13px;color:var(--dim)}
+.cfl.on{color:var(--tx)}
+.cfl .num{min-width:30px;font-size:17px}
+.cfl.on .num{color:var(--kg)}
+.cfl small{display:block;color:var(--sub);font-size:11px}
+.warn{background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.35);border-radius:10px;padding:9px 11px;font-size:12.5px;margin-top:12px;line-height:1.5}
+.cands{display:flex;flex-direction:column;gap:6px;margin-top:6px}
+.cands button{background:var(--card2);border:1px solid rgba(94,234,212,.45);color:var(--kg);border-radius:10px;padding:10px;font-family:Rajdhani,monospace;font-size:20px;letter-spacing:.06em}
+.okbig{text-align:center;font-size:44px;color:var(--ok);margin:6px 0 2px}
+.prbtn{display:block;width:100%;background:var(--card);border:1px solid rgba(94,234,212,.45);color:var(--kg);border-radius:12px;padding:12px;font-family:inherit;font-size:14px;font-weight:700;margin-bottom:12px}
+#print{display:none}
+@media print{
+  @page{size:A4;margin:12mm}
+  html,body{background:#fff !important;color:#000 !important;padding:0 !important}
+  body > *{display:none !important}
+  body > #print{display:block !important;font-family:"Noto Sans JP",sans-serif;font-size:11pt;color:#000}
+  .ph{font-size:13pt;border-bottom:2px solid #000;padding-bottom:4px;margin-bottom:8px}
+  .pb{border:1px solid #000;border-radius:4px;padding:7px 9px;margin-bottom:7px;page-break-inside:avoid}
+  .pr1{display:flex;gap:10px;align-items:baseline;font-size:10pt}
+  .pck{font-size:14pt}
+  .pno{font-size:13pt;font-weight:700}
+  .psh{margin-left:auto}
+  .pad{font-size:13pt;margin-top:4px}
+  .pnm{font-size:13pt;font-weight:700;margin-top:2px}
+  .ptel{font-weight:400;margin-left:16px}
+  .pit{font-size:10.5pt;margin-top:3px}
+  .psk{color:#555;font-size:9pt}
+  .pnt{font-size:10pt;margin-top:3px}
+  .ptr{font-size:10pt;margin-top:6px;color:#333}
+}
+#loading{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:var(--bg);z-index:10;color:var(--sub);font-size:12px}
+#loading .logo{width:54px;height:54px;animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.4}}
+header{padding-top:calc(10px + env(safe-area-inset-top))}
+/* アプリ化（2026-10-03）: 連携画面・カメラ */
+#pair{position:fixed;inset:0;z-index:30;background:var(--bg);overflow:auto;padding:calc(28px + env(safe-area-inset-top)) 20px 30px;display:none}
+#pair h2{font-size:18px;margin:14px 0 6px}
+#pair ol{color:var(--sub);font-size:13px;line-height:1.8;padding-left:20px;margin:8px 0 16px}
+#pair textarea{width:100%;box-sizing:border-box;background:var(--card);border:1px solid var(--line);color:inherit;border-radius:12px;padding:10px;font-family:monospace;font-size:12px;height:70px;margin-top:10px}
+#pair .smmsg{margin-top:10px}
+#scan{position:fixed;inset:0;z-index:40;background:#000;display:none;flex-direction:column}
+#scan video{flex:1;width:100%;min-height:0;object-fit:cover}
+#scan .guide{position:absolute;left:8%;right:8%;top:32%;height:22%;border:2px solid var(--kg);border-radius:14px;box-shadow:0 0 0 9999px rgba(0,0,0,.35);pointer-events:none}
+#scan .st{position:absolute;left:12px;right:12px;top:calc(18px + env(safe-area-inset-top));text-align:center;color:#fff;font-size:14px;text-shadow:0 1px 3px #000}
+#scan .bar{display:flex;gap:8px;padding:12px 14px calc(14px + env(safe-area-inset-bottom));background:#0a0c10}
+#scan .bar button{flex:1;background:var(--card);color:#e5e7eb;border:1px solid var(--line);border-radius:12px;padding:13px 6px;font-family:inherit;font-size:13px}
+#scan .bar button.pri{background:var(--kg);color:#0a0c10;border:none;font-weight:700}
+.qrbox{background:#fff;border-radius:14px;padding:14px;margin:10px auto;max-width:260px}
+.qrbox svg{display:block;width:100%;height:auto}
+#err{display:none;margin:16px;padding:12px;border-radius:12px;border:1px solid rgba(248,113,113,.4);color:var(--neg);font-size:13px}
+</style>
+</head>
+<body>
+
+<div id="loading">
+  <svg class="logo" viewBox="0 0 32 32"><rect x="4" y="4" width="24" height="24" rx="6" fill="none" stroke="#5eead4" stroke-width="2.4"/><path d="M8 24 L24 8" stroke="#5eead4" stroke-width="2.4" stroke-linecap="round"/><path d="M11 13h4M17 19h4" stroke="#5eead4" stroke-width="2" stroke-linecap="round" opacity=".55"/></svg>
+  <div>カゲヌイを読み込み中…</div>
+</div>
+
+<header>
+  <div class="wrap brand">
+    <svg class="logo" viewBox="0 0 32 32"><rect x="4" y="4" width="24" height="24" rx="6" fill="none" stroke="#5eead4" stroke-width="2.4"/><path d="M8 24 L24 8" stroke="#5eead4" stroke-width="2.4" stroke-linecap="round"/><path d="M11 13h4M17 19h4" stroke="#5eead4" stroke-width="2" stroke-linecap="round" opacity=".55"/></svg>
+    <h1>KAGENUI<small>MOBILE</small></h1>
+    <div class="stamp" id="stamp"></div>
+    <button class="reload" id="reload" aria-label="再読み込み">&#8635;</button>
+  </div>
+</header>
+
+<div id="err"></div>
+
+<main class="wrap">
+  <section class="view on" id="v-today"></section>
+  <section class="view" id="v-cb"></section>
+  <section class="view" id="v-bo"></section>
+  <section class="view" id="v-stock">
+    <div class="sum" id="sum"></div>
+    <input class="search" id="q" type="search" placeholder="品名・SKUで絞り込み">
+    <div class="chips" id="cars"></div>
+    <div class="chips" id="sites">
+      <button data-v="" class="on">両拠点</button><button data-v="千葉">千葉の担当</button><button data-v="群馬">群馬の担当</button>
+    </div>
+    <div id="slist"></div>
+  </section>
+  <section class="view" id="v-log">
+    <div class="chips" id="logseg"><button data-v="moves" class="on">入出庫</button><button data-v="sync">Wix同期</button></div>
+    <div id="v-moves"></div>
+    <div id="v-sync" style="display:none"></div>
+  </section>
+</main>
+
+<nav><div class="wrap" id="nav">
+  <button data-v="today" class="on"><svg viewBox="0 0 24 24"><path d="M3 7h11v9H3zM14 10h4l3 3v3h-7"/><circle cx="7" cy="18" r="1.8"/><circle cx="17" cy="18" r="1.8"/></svg>今日出荷<span class="badge" id="b-today" style="display:none"></span></button>
+  <button data-v="cb"><svg viewBox="0 0 24 24"><path d="M4 21V9l8-5 8 5v12"/><path d="M9 21v-6h6v6"/></svg>千葉出荷<span class="badge" id="b-cb" style="display:none"></span></button>
+  <button data-v="bo"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>BO<span class="badge" id="b-bo" style="display:none"></span></button>
+  <button data-v="stock"><svg viewBox="0 0 24 24"><path d="M3 8l9-5 9 5v8l-9 5-9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>在庫</button>
+  <button data-v="log"><svg viewBox="0 0 24 24"><path d="M7 4v16M7 20l-3-3M7 20l3-3M17 20V4M17 4l-3 3M17 4l3 3"/></svg>ログ<span class="badge" id="b-log" style="display:none"></span></button>
+</div></nav>
+
+<div id="print"></div>
+<div class="sm hidden" id="sm"><div class="smbox" id="smbox"></div></div>
+<input type="file" id="cam" accept="image/*" capture="environment" style="display:none">
+<div id="pair"></div>
+<div id="scan"><video id="scanv" playsinline muted autoplay></video><div class="guide"></div><div class="st" id="scanst"></div><div class="bar" id="scanbar"></div></div>
+
+<script>
+var D = null, view = "today", fil = "all", car = "", site = "", logv = "moves";
+var BY = {}, UN = {};
+
+/* ---------- サーバー呼び出し（2026-10-03 アプリ化） ----------
+ * GASの画面として開いたとき … google.script.run
+ * スマホアプリ（GitHub Pages）… 「全員」デプロイの doPost に合言葉付きで fetch
+ * パソコンのローカル確認     … mock.json（合言葉が無いときだけ）
+ */
+var API_URL = "__API_URL__";       // アプリ用APIデプロイの /exec（秘密ではない。合言葉が無いと何も返さない）
+var APP_URL = "https://seraphixjp.github.io/kagenui/";
+var GAS = !!(window.google && google.script && google.script.run);
+var LOCAL = location.protocol === "file:" || /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
+function lsStr(k){ try { return localStorage.getItem(k) || ""; } catch (e) { return ""; } }
+function apiKey(){ return lsStr("km_key"); }
+(function(){                         // 連携QRで開いたとき: #k=合言葉 を保存してURLから消す
+  var m = /[#&]k=([0-9a-f]{64})/.exec(location.hash);
+  if (m && !GAS) { try { localStorage.setItem("km_key", m[1]); } catch (e) {} history.replaceState(null, "", location.pathname + location.search); }
+})();
+var MOCK = !GAS && LOCAL && !apiKey();
+function call(fn, args){
+  args = args || [];
+  if (GAS) return new Promise(function(ok, ng){ var r = google.script.run.withSuccessHandler(ok).withFailureHandler(ng); r[fn].apply(r, args); });
+  return fetch(API_URL, { method: "POST", body: JSON.stringify({ k: apiKey(), fn: fn, args: args }) })
+    .catch(function(){ throw new Error("通信できませんでした（電波を確認してください）"); })
+    .then(function(r){ return r.json(); })
+    .then(function(j){
+      if (j.ok) return j.data;
+      var e = new Error(j.error || "サーバーでエラーが起きました"); if (j.auth === false) e.auth = true; throw e;
+    });
+}
+
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s == null ? "" : s).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
+function md(s){ return s && s.length >= 10 ? (+s.slice(5, 7)) + "/" + (+s.slice(8, 10)) : esc(s); }
+function daysAgo(s){
+  if (!s || s.length < 10) return null;
+  var a = new Date(+s.slice(0, 4), +s.slice(5, 7) - 1, +s.slice(8, 10));
+  var n = D.now, b = new Date(+n.slice(0, 4), +n.slice(5, 7) - 1, +n.slice(8, 10));
+  return Math.round((b - a) / 86400000);
+}
+function siteTag(s){
+  if (!s) return "";
+  if (s.indexOf("千葉") >= 0) return '<span class="tag cb">千葉</span>';
+  if (s.indexOf("群馬") >= 0) return '<span class="tag gm">群馬</span>';
+  return '<span class="tag">' + esc(s) + '</span>';
+}
+function zc(j){ return j == null ? "z0" : j < 0 ? "zn" : j === 0 ? "z0" : j <= 2 ? "zl" : "zp"; }
+function isBad(st){ return /error|fail|exception|no_shukkamoto|エラー|失敗/i.test(st) && st !== "wix_push_sku_not_found"; }
+
+/* ---------- 読み込み ---------- */
+var LOADED_AT = 0;
+function load(){
+  $("reload").classList.add("spin");
+  var done = function(d){ D = d; $("reload").classList.remove("spin"); $("loading").style.display = "none"; init(); };
+  var fail = function(e){
+    $("reload").classList.remove("spin"); $("loading").style.display = "none";
+    if (e && e.auth) { showPair("合言葉が無効になっています。連携をやり直してください。"); return; }
+    var last = !GAS && lsStr("km_last");
+    if (last && !D) { try { D = JSON.parse(last); init(); } catch (x) {} }
+    $("err").style.display = "block";
+    $("err").textContent = "読み込みに失敗しました: " + (e && e.message ? e.message : e) + (D && last ? "（前回 " + D.now.slice(5) + " のデータを表示中）" : "");
+  };
+  if (MOCK) fetch("mock.json").then(function(r){ return r.json(); }).then(done).catch(fail);
+  else call("getData").then(function(d){ if (!GAS) { try { localStorage.setItem("km_last", JSON.stringify(d)); } catch (e) {} } done(d); }, fail);
+  LOADED_AT = Date.now();
+}
+
+function init(){
+  $("err").style.display = "none";
+  BY = {}; UN = {};
+  D.items.forEach(function(r){ BY[r[0]] = r; });
+  D.unshipped.forEach(function(r){ UN[r[0]] = r; });
+  var last = D.sync.length ? D.sync[D.sync.length - 1][0] : "—";
+  var badSync = D.sync.slice(-20).filter(function(r){ return isBad(r[2]); }).length;
+  $("stamp").innerHTML = '<span class="ld" style="background:' + (badSync ? 'var(--neg)' : 'var(--ok)') + '"></span>最終同期 ' + esc(last) + '<br>表示 ' + esc(D.now.slice(5).replace("-", "/"));
+  // 車種チップ（マスターの並び順）
+  var cars = [], seen = {};
+  D.items.forEach(function(r){ if (r[2] && !seen[r[2]]) { seen[r[2]] = 1; cars.push(r[2]); } });
+  var h = '<button data-v="" class="' + (car ? '' : 'on') + '">全車種</button>';
+  cars.forEach(function(c){ h += '<button data-v="' + esc(c) + '" class="' + (car === c ? 'on' : '') + '">' + esc(c) + '</button>'; });
+  $("cars").innerHTML = h;
+  updateBadges();
+  badge("b-log", pending().length + badSync);
+  render();
+}
+function updateBadges(){
+  var P = shipPlan(), packed = getPacked();
+  var sent = getSent();
+  badge("b-today", P.gm.filter(function(x){ return !packed[x.key] && !sent[x.key]; }).length);
+  badge("b-cb", P.cb.filter(function(x){ return x.bo || daysAgo(String(x.o.d).slice(0, 10)) >= 3; }).length);
+  badge("b-bo", P.wait.filter(function(b){ return b.due && daysAgo(b.due) > 0; }).length);
+}
+function badge(id, n){ var b = $(id); b.style.display = n ? "" : "none"; b.textContent = n > 99 ? "99+" : n; }
+function pending(){ return D.moves.filter(function(r){ return !r[9]; }); }
+
+/* ---------- 在庫 ---------- */
+function renderStock(){
+  var live = D.items.filter(function(r){ return r[8] != null; });
+  var cnt = {
+    out: live.filter(function(r){ return r[8] <= 0; }).length,
+    low: live.filter(function(r){ return r[8] >= 1 && r[8] <= 2; }).length,
+    bo: D.items.filter(function(r){ return r[7] > 0; }).length,
+    un: D.items.filter(function(r){ return UN[r[0]]; }).length
+  };
+  var tiles = [["out", cnt.out, "在庫切れ", "zn"], ["low", cnt.low, "残り1〜2", "zl"], ["bo", cnt.bo, "BOあり", "zn"], ["un", cnt.un, "未出荷あり", "zl"]];
+  $("sum").innerHTML = tiles.map(function(t){
+    return '<button data-v="' + t[0] + '" class="' + (fil === t[0] ? 'on' : '') + '"><div class="v num ' + (t[1] ? t[3] : 'z0') + '">' + t[1] + '</div><div class="l">' + t[2] + '</div></button>';
+  }).join("");
+
+  var q = $("q").value.trim().toLowerCase();
+  var list = D.items.filter(function(r){
+    if (car && r[2] !== car) return false;
+    if (site && r[3].indexOf(site) < 0) return false;
+    if (q && (r[0] + " " + r[1]).toLowerCase().indexOf(q) < 0) return false;
+    if (fil === "out") return r[8] != null && r[8] <= 0;
+    if (fil === "low") return r[8] != null && r[8] >= 1 && r[8] <= 2;
+    if (fil === "bo") return r[7] > 0;
+    if (fil === "un") return !!UN[r[0]];
+    return true;
+  });
+  if (!list.length) { $("slist").innerHTML = '<div class="empty">該当する商品はありません</div>'; return; }
+  var tot = list.reduce(function(a, r){ return a + Math.max(0, r[6]); }, 0);
+  var h = '<div class="sub" style="margin:2px 2px 8px;font-size:12px;color:var(--sub)">' + list.length + '品目 ・ 棚の合計 <span class="num" style="color:var(--tx);font-size:14px">' + tot + '</span> 個</div>';
+  list.forEach(function(r){
+    var j = r[8], u = UN[r[0]], cls = r[3].indexOf("千葉") >= 0 ? " cb" : r[3].indexOf("群馬") >= 0 ? " gm" : "";
+    h += '<div class="it' + cls + '"><div class="l"><div class="nm">' + esc(r[1] || r[0]) + '</div>';
+    h += '<div class="sk">' + esc(r[0]) + (r[2] ? ' ・ ' + esc(r[2]) : '') + '</div>';
+    h += '<div class="st"><span class="cbx">千葉<b>' + r[4] + '</b></span><span class="gmx">群馬<b>' + r[5] + '</b></span>';
+    if (r[7] > 0) h += '<span class="bo">BO<b>' + r[7] + '</b></span>';
+    if (u) h += '<span class="un">未出荷<b>' + u[1] + '</b></span>';
+    h += '</div></div><div class="r"><div class="v num ' + zc(j) + '">' + (j == null ? '—' : j) + '</div><div class="c">出荷可能</div></div></div>';
+  });
+  h += '<div class="foot">左の色は出荷担当（青＝千葉・橙＝群馬）。出荷可能＝千葉＋群馬−BO で、Wixに出ている数。マイナスはBOが在庫を上回っている状態。数の修正は MIKURA か入出庫ログから。</div>';
+  $("slist").innerHTML = h;
+}
+
+/* ---------- 出荷（今日・千葉・BO） ---------- */
+function normNo(s){ return String(s || "").replace("#", "").trim(); }
+function siteOf(sku){ var it = BY[sku], s = it ? it[3] : ""; return s.indexOf("群馬") >= 0 ? "群馬" : s.indexOf("千葉") >= 0 ? "千葉" : ""; }
+function shelf(sku){ var it = BY[sku]; if (!it) return 0; return siteOf(sku) === "群馬" ? it[5] : it[4]; }
+function ageText(d){ return d == null ? "" : d === 0 ? "今日" : d + "日前"; }
+function packKey(){ return "km_packed_" + D.now.slice(0, 10); }
+function getPacked(){ try { return JSON.parse(localStorage.getItem(packKey()) || "{}"); } catch (e) { return {}; } }
+function setPacked(o){ try { localStorage.setItem(packKey(), JSON.stringify(o)); } catch (e) {} }
+
+/**
+ * Wixの未発送明細を「群馬で今日出す／千葉が出す／BO」に振り分ける。
+ * ・BOは出荷チェックリストの未出荷行と 注文番号＋SKU で突き合わせる。SKUがマスターに無い明細
+ *   （改番前の古いSKUなど）は、同じ注文番号のBO行があればBOとみなす。
+ * ・一部発送の注文は、Wixの発送記録で引いた残り数（未発送数）を使う。発送記録が取れなかったときだけ、
+ *   BOでない明細を「発送済み」とみなして外す（在庫のある方を先に出してBOが残った形）。
+ * ・BOに棚の在庫（担当拠点のF/G）を古い注文から割り当て、足りたものは「入荷済み」として今日出す側へ回す。
+ */
+function shipPlan(){
+  var boRows = D.backlog.map(function(r){
+    return { d: r[0], no: normNo(r[1]), who: r[2], sku: r[3], name: (BY[r[3]] && BY[r[3]][1]) || r[4] || r[3], qty: r[5], due: r[6] };
+  });
+  var boKey = {}, boNo = {};
+  boRows.forEach(function(b){ boKey[b.no + "|" + b.sku] = b; boNo[b.no] = 1; });
+
+  var orders = {}, list = [];
+  (D.plan || []).forEach(function(r){
+    var no = normNo(r[1]);
+    if (!orders[no]) { orders[no] = { no: no, d: r[0], who: r[2], pref: r[3], partial: !!r[7], ship: r[8], lines: [] }; list.push(orders[no]); }
+    orders[no].lines.push({ sku: r[4], name: (BY[r[4]] && BY[r[4]][1]) || r[5] || r[4], qty: r[6], opt: r[9] || "", done: r[10] == null ? null : r[10] });
+  });
+
+  var gm = [], cb = [], unknown = [], shippedPartial = 0;
+  list.forEach(function(o){
+    var g = [], c = [];
+    o.lines.forEach(function(l){
+      if (boKey[o.no + "|" + l.sku] || (!BY[l.sku] && boNo[o.no])) return;   // BO側で扱う
+      if (l.qty <= 0 || (o.partial && l.done == null)) { shippedPartial++; return; }   // 発送済みの明細
+      var s = siteOf(l.sku);
+      if (s === "群馬") g.push(l); else if (s === "千葉") c.push(l); else unknown.push({ o: o, l: l });
+    });
+    if (g.length) gm.push({ key: o.no, o: o, lines: g, bo: false });
+    if (c.length) cb.push({ o: o, lines: c, bo: false });
+  });
+
+  boRows.sort(function(a, b){ return a.d === b.d ? (a.no < b.no ? -1 : 1) : (a.d < b.d ? -1 : 1); });
+  var left = {}, wait = [];
+  boRows.forEach(function(b){
+    if (left[b.sku] == null) left[b.sku] = Math.max(0, shelf(b.sku));
+    if (left[b.sku] >= b.qty) {
+      left[b.sku] -= b.qty;
+      var o = orders[b.no] || { no: b.no, d: b.d, who: b.who, pref: "", ship: "" };
+      var x = { key: "BO|" + b.no + "|" + b.sku, o: o, lines: [b], bo: true };
+      if (siteOf(b.sku) === "群馬") gm.push(x); else cb.push(x);
+    } else wait.push(b);
+  });
+  var byDate = function(a, b){ return a.o.d < b.o.d ? -1 : 1; };
+  gm.sort(byDate); cb.sort(byDate);
+  return { gm: gm, cb: cb, wait: wait, unknown: unknown, shippedPartial: shippedPartial, orders: orders };
+}
+
+function oHead(o, extra){
+  return '<div class="oh"><span class="no">' + (/^[0-9]+$/.test(o.no) ? '#' : '') + esc(o.no) + '</span><span>' + md(o.d) + ' 受注（' + ageText(daysAgo(String(o.d).slice(0, 10))) + '）</span>' + (o.pref ? '<span>' + esc(o.pref) + '</span>' : '') + (extra || '') + '</div>' +
+    '<div class="who">' + esc(o.who ? o.who + ' 様' : '') + (o.ship ? ' ・ ' + esc(o.ship) : '') + '</div>';
+}
+function oLine(l){ return '<div class="ln"><span class="lq">×' + l.qty + '</span><span class="lnm">' + esc(l.name) + (l.opt ? '<span class="lop">' + esc(l.opt) + '</span>' : '') + '<span class="lsk">' + esc(l.sku) + (l.done ? ' ・ 発送済み ' + l.done : '') + '</span></span></div>'; }
+function stampNote(){ return D.planAt ? '<div class="foot" style="margin:0 2px 10px">Wixの未発送（支払い済み）を ' + esc(D.planAt) + ' に取得。10分おきに更新されます。</div>' : '<div class="alert">出荷予定シートがまだありません。カゲヌイ本体の次の10分バッチで作られます。</div>'; }
+
+/** 今日出荷（群馬から自分で出すもの） */
+function renderToday(){
+  var P = shipPlan(), packed = getPacked(), h = stampNote();
+  if (P.gm.length) h += '<button class="prbtn" data-print="1">&#128424; 伝票用リストを印刷（住所・電話つき）</button>';
+  var sent = getSent(), trs = getTr();
+  var total = P.gm.length, done = P.gm.filter(function(x){ return packed[x.key] || sent[x.key]; }).length;
+  if (!total) { $("v-today").innerHTML = h + '<div class="empty">今日群馬から出すものはありません</div>' + unknownBlock(P); return; }
+  h += '<div class="card"><div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:12px;color:var(--sub)">梱包済み</span><span class="num" style="font-size:26px">' + done + '<span style="font-size:15px;color:var(--sub)"> / ' + total + ' 件</span></span></div><div class="prog"><i style="width:' + (done / total * 100) + '%"></i></div></div>';
+  var pick = {}, order = [];
+  P.gm.forEach(function(x){ x.lines.forEach(function(l){
+    var k = l.sku + "|" + (l.opt || "");                      // アダプター違いは別に数える
+    if (!pick[k]) { pick[k] = { name: l.name, sku: l.sku, opt: l.opt, q: 0 }; order.push(k); }
+    pick[k].q += l.qty;
+  }); });
+  order.sort(function(a, b){ return a < b ? -1 : 1; });
+  h += '<div class="sec">棚から取る数</div><div class="card pick">';
+  order.forEach(function(k){ var p = pick[k]; h += '<div class="ln"><span class="lq">×' + p.q + '</span><span class="lnm">' + esc(p.name) + (p.opt ? '<span class="lop">' + esc(p.opt) + '</span>' : '') + '<span class="lsk">' + esc(p.sku) + '</span></span></div>'; });
+  h += '</div>';
+  h += '<div class="sec">注文（タップで梱包済み → 伝票を読む → 発送登録）</div>';
+  P.gm.forEach(function(x){
+    var on = !!(packed[x.key] || sent[x.key]);
+    h += '<div class="ord ' + (x.bo ? 'bo' : 'gm') + (sent[x.key] ? ' done' : on ? ' packed' : '') + '" data-pk="' + esc(x.key) + '"><span class="ck">' + (on ? '&#10003;' : '') + '</span>' +
+      oHead(x.o, x.bo ? '<span class="tag bo">BO・入荷済み</span>' : '') + x.lines.map(oLine).join("") +
+      (x.bo ? '<div class="foot" style="margin:6px 0 0">出したら入出庫ログに「出荷（BO消込）」を入れる</div>' : '') +
+      '<div class="sendrow">' + (sent[x.key] ? '<span class="tag ok">発送連絡済み ' + fmtTr(sent[x.key]) + '</span>' :
+        !packed[x.key] ? '<button class="sendbtn" disabled>伝票を読む（梱包チェック後に押せます）</button>' :
+        trs[x.key] ? '<span class="tag wt" style="margin-right:auto;align-self:center">番号 ' + fmtTr(trs[x.key].t) + '</span><button class="sendbtn" data-send="' + esc(x.key) + '">Wixで入力</button>' :
+        '<button class="sendbtn" data-send="' + esc(x.key) + '">伝票を読む</button>') + '</div></div>';
+  });
+  h += unknownBlock(P);
+  h += '<div class="foot">チェックはこのスマホの中だけに残ります（日付が変わるとリセット）。お客様への発送連絡はWixで追跡番号を入れたときに飛びます。' + (P.shippedPartial ? '一部発送済みの注文で先に出た明細 ' + P.shippedPartial + '件は除いています（' + (/発送記録OK/.test(D.planState || "") ? 'Wixの発送記録で確認' : '発送記録が取れなかったので推定') + '）。' : '') + '</div>';
+  $("v-today").innerHTML = h;
+}
+function unknownBlock(P){
+  if (!P.unknown.length) return "";
+  var h = '<div class="sec">出荷担当がわからない明細</div><div class="foot" style="margin:-2px 2px 8px">現在庫マスターにSKUが無いか、E列が空です。</div>';
+  P.unknown.forEach(function(u){ h += '<div class="ord nock bad">' + oHead(u.o) + oLine(u.l) + '</div>'; });
+  return h;
+}
+
+/** 千葉出荷（ティースリーが出すもの） */
+function renderCb(){
+  var P = shipPlan(), h = stampNote();
+  var late = P.cb.filter(function(x){ return !x.bo && daysAgo(String(x.o.d).slice(0, 10)) >= 3; }).length;
+  h += '<div class="health"><div><div class="l">千葉の未発送</div><div class="v num">' + P.cb.length + '件</div></div><div><div class="l">3日以上たった</div><div class="v num ' + (late ? 'zn' : 'z0') + '">' + late + '件</div></div><div><div class="l">入荷済みBO</div><div class="v num">' + P.cb.filter(function(x){ return x.bo; }).length + '件</div></div></div>';
+  if (!P.cb.length) { $("v-cb").innerHTML = h + '<div class="empty">千葉の未発送はありません</div>'; return; }
+  P.cb.forEach(function(x){
+    var age = daysAgo(String(x.o.d).slice(0, 10)), lt = !x.bo && age >= 3;
+    h += '<div class="ord nock ' + (x.bo ? 'bo' : 'cb') + (lt ? ' bad' : '') + '">' + oHead(x.o, x.bo ? '<span class="tag bo">BO・入荷済み</span>' : lt ? '<span class="tag ng">' + age + '日経過・要確認</span>' : '') + x.lines.map(oLine).join("") + '</div>';
+  });
+  h += '<div class="foot">ティースリーが出す分。見守るだけで、こちらの作業はありません。集荷まで中1〜2日かかるので、受注から3日以上たったものを要確認にしています。「BO・入荷済み」は千葉にBOぶんの在庫が入ったもので、出荷されたか確認が要ります。</div>';
+  $("v-cb").innerHTML = h;
+}
+
+/** BO（入荷待ち） */
+function renderBo(){
+  var P = shipPlan(), wait = P.wait;
+  var late = wait.filter(function(b){ return b.due && daysAgo(b.due) > 0; }).length;
+  var h = '<div class="health"><div><div class="l">入荷待ち</div><div class="v num">' + wait.length + '件</div></div><div><div class="l">納期超過</div><div class="v num ' + (late ? 'zn' : 'z0') + '">' + late + '件</div></div><div><div class="l">商品の種類</div><div class="v num" id="bo-kinds"></div></div></div>';
+  if (!wait.length) { $("v-bo").innerHTML = h + '<div class="empty">入荷待ちのBOはありません</div>'; return; }
+  var by = {}, order = [];
+  wait.forEach(function(b){ if (!by[b.sku]) { by[b.sku] = []; order.push(b.sku); } by[b.sku].push(b); });
+  var firstDue = function(k){ return by[k].map(function(x){ return x.due || "9"; }).sort()[0]; };
+  order.sort(function(a, b){ return firstDue(a) < firstDue(b) ? -1 : 1; });
+  order.forEach(function(sku){
+    var rows = by[sku], it = BY[sku], q = rows.reduce(function(a, r){ return a + r.qty; }, 0), st = Math.max(0, shelf(sku)), s = siteOf(sku);
+    var anyLate = rows.some(function(r){ return r.due && daysAgo(r.due) > 0; });
+    h += '<div class="bosku' + (anyLate ? ' bad' : '') + '" data-sku="' + esc(sku) + '"><div class="top"><div class="nm">' + esc(rows[0].name) + '<small>' + esc(sku) + (it && it[2] ? ' ・ ' + esc(it[2]) : '') + '</small></div><div class="q"><div class="v num">' + q + '</div><div class="c">待ち</div></div></div>';
+    h += '<div class="meta">' + (s ? '<span class="tag ' + (s === "群馬" ? 'gm' : 'cb') + '">' + s + '</span>' : '<span class="tag">マスターに無いSKU</span>') + '<span class="tag">棚 ' + st + '</span><span class="tag ' + (anyLate ? 'ng' : 'wt') + '">最短納期 ' + md(firstDue(sku)) + '</span><span class="tag">' + rows.length + '注文 ▾</span></div>';
+    h += '<div class="bolist">';
+    rows.forEach(function(r){
+      var lt = r.due && daysAgo(r.due) > 0;
+      h += '<div class="bl"><span class="no">' + (/^[0-9]+$/.test(r.no) ? '#' : '') + esc(r.no) + '</span><span class="w">' + md(r.d) + ' ・ ' + esc(r.who || '') + '</span><span class="num">×' + r.qty + '</span>' + (r.due ? '<span class="tag ' + (lt ? 'ng' : 'wt') + '">納期 ' + md(r.due) + '</span>' : '') + '</div>';
+    });
+    h += '</div></div>';
+  });
+  h += '<div class="foot">最短納期が早い商品から並べています。商品をタップすると注文の一覧が開きます。入荷して棚に数が入ると、古い注文から「今日出荷」か「千葉出荷」に移ります。</div>';
+  $("v-bo").innerHTML = h;
+  $("bo-kinds").textContent = order.length + "種";
+}
+
+/* ---------- 発送連絡（佐川の伝票番号 → Wixの画面で入力） ---------- */
+// 群馬の商品も Wix では「千葉配送センター」割当（蔡さんの請求がその出荷依頼メールで回っているため変えない）。
+// そのため API では発送記録を作れない。番号を読んで保存 → Wixの注文画面を開いて手で入力 → 入ったかを確認、の流れにする。
+var SEND = null, AC = null;
+/** 音はタップの中で一度鳴らす準備をしておかないとスマホでは鳴らない */
+function unlockAudio(){ try { AC = AC || new (window.AudioContext || window.webkitAudioContext)(); if (AC.state === "suspended") AC.resume(); } catch (e) {} }
+/** ok＝2音のチャイム／scan＝短いピッ／ng＝低いブブッ */
+function beep(kind){
+  try {
+    unlockAudio();
+    var notes = kind === "ok" ? [[880, 0], [1320, 0.13]] : kind === "scan" ? [[1500, 0]] : [[220, 0], [180, 0.2]];
+    notes.forEach(function(n){
+      var o = AC.createOscillator(), g = AC.createGain(), t = AC.currentTime + n[1];
+      o.type = kind === "ng" ? "square" : "sine"; o.frequency.value = n[0];
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.35, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + (kind === "ok" ? 0.35 : 0.18));
+      o.connect(g); g.connect(AC.destination); o.start(t); o.stop(t + 0.4);
+    });
+    if (navigator.vibrate) navigator.vibrate(kind === "ng" ? [90, 60, 90] : kind === "ok" ? [60, 40, 120] : 40);
+  } catch (e) {}
+}
+function lsGet(k){ try { return JSON.parse(localStorage.getItem(k) || "{}"); } catch (e) { return {}; } }
+function lsSet(k, o){ try { localStorage.setItem(k, JSON.stringify(o)); } catch (e) {} }
+function getSent(){ return lsGet("km_sent"); }          // 確認まで済んだ注文 → 追跡番号
+function getTr(){ return lsGet("km_tr"); }              // 番号だけ保存した注文 → { t: 追跡番号, url: Wixの注文画面 }
+function sagawaOk(n){ return /^[0-9]{12}$/.test(n) && Number(n.slice(0, 11)) % 7 === Number(n.slice(11)); }
+function fmtTr(n){ return n && n.length === 12 ? n.slice(0, 4) + "-" + n.slice(4, 8) + "-" + n.slice(8) : (n || ""); }
+/** 読み取った文字列から佐川の12桁を探す（前後の記号や余計な桁があっても拾う） */
+function pickSagawa(raw){
+  var d = String(raw || "").replace(/[^0-9]/g, "");
+  if (sagawaOk(d)) return d;
+  for (var i = 0; i + 12 <= d.length; i++) if (sagawaOk(d.slice(i, i + 12))) return d.slice(i, i + 12);
+  return "";
+}
+function copyText(t){
+  var ok = false;
+  try { var ta = document.createElement("textarea"); ta.value = t; ta.style.position = "fixed"; ta.style.opacity = "0"; document.body.appendChild(ta); ta.select(); ok = document.execCommand("copy"); document.body.removeChild(ta); } catch (e) {}
+  try { if (navigator.clipboard) navigator.clipboard.writeText(t).catch(function(){}); } catch (e) {}
+  return ok;
+}
+
+function openSend(key){
+  var x = shipPlan().gm.filter(function(g){ return g.key === key; })[0];
+  if (!x || !getPacked()[key]) return;                    // 梱包チェックが先
+  var saved = getTr()[key];
+  SEND = { x: x, tracking: saved ? saved.t : "", url: saved ? saved.url : "", step: saved ? "go" : "in", msg: "" };
+  renderSend();
+  $("sm").classList.remove("hidden");
+}
+function closeSend(){ SEND = null; $("sm").classList.add("hidden"); }
+
+function renderSend(){
+  var S = SEND, o = S.x.o, h = '<div class="smh"><span class="no">' + (/^[0-9]+$/.test(o.no) ? '#' : '') + esc(o.no) + '</span> 発送連絡<button class="smx" data-act="close">&#215;</button></div>';
+  h += '<div class="who" style="margin-bottom:8px">' + esc(o.who ? o.who + ' 様' : '') + (o.pref ? ' ・ ' + esc(o.pref) : '') + '</div>';
+  S.x.lines.forEach(function(l){ h += '<div class="cfl on"><span class="num">×' + l.qty + '</span><span>' + esc(l.name) + (l.opt ? '<span class="lop">' + esc(l.opt) + '</span>' : '') + '</span></div>'; });
+  if (S.step === "in") {
+    h += '<div class="lbl2" style="margin-top:12px">佐川の伝票番号（貼る前の伝票か、ご依頼主控え）</div>';
+    h += '<button class="bigbtn" data-act="cam">&#128247; 伝票を撮影して読み取る</button>';
+    h += '<input class="trin" id="trin" inputmode="numeric" autocomplete="off" placeholder="または12桁を入力" value="' + esc(fmtTr(S.tracking)) + '">';
+    h += '<div class="trst" id="trst"></div>';
+    if (S.cands) h += '<div class="cands">' + S.cands.map(function(c){ return '<button data-act="pick" data-v="' + c + '">' + fmtTr(c) + '</button>'; }).join("") + '</div>';
+    if (S.msg) h += '<div class="smmsg">' + esc(S.msg) + '</div>';
+    h += '<div class="smbtns"><button data-act="close">やめる</button><button class="pri" id="toCf" data-act="save">確認へ</button></div>';
+  } else if (S.step === "busy") {
+    h += '<div class="empty">' + esc(S.msg || "Wixに確認中…") + '</div>';
+  } else if (S.step === "go") {
+    h += '<div class="trbig num">' + fmtTr(S.tracking) + '</div><div class="foot" style="margin:0 0 6px;text-align:center">佐川急便 ・ 番号は保存済み（お客様にはまだ何も届いていません）</div>';
+    h += '<button class="bigbtn" data-act="open">&#9312; 番号をコピーしてWixの注文を開く</button>';
+    h += '<div class="foot" style="margin:8px 2px">Wixで「追跡番号を追加」→ 番号欄に貼り付け → 配送業者「佐川急便」→ 適用。終わったらこの画面に戻って②を押す。</div>';
+    if (S.msg) h += '<div class="smmsg">' + esc(S.msg) + '</div>';
+    h += '<div class="smbtns"><button data-act="redo">番号を読み直す</button><button class="pri" data-act="verify">&#9313; 入れたので確認</button></div>';
+  } else if (S.step === "cf") {
+    var pv = S.preview;
+    h += '<div class="trbig num" style="font-size:20px">' + fmtTr(S.tracking) + '</div><div class="who" style="text-align:center;margin-bottom:8px">佐川急便 ・ この明細を発送済みにします</div>';
+    if (pv) pv.lines.forEach(function(l){ h += '<div class="cfl' + (l.send ? ' on' : '') + '"><span class="num">×' + (l.send ? l.remain : 0) + '</span><span>' + esc(l.name) + (l.opt ? '<span class="lop">' + esc(l.opt) + '</span>' : '') + (l.send ? '' : '（今回は送らない）') + '</span></div>'; });
+    h += '<div class="who" style="margin:8px 0">「送る」を押すとWixに発送が登録され、お客様に発送のお知らせが届きます（Wixのメール設定どおり）。</div>';
+    h += '<div class="smbtns"><button data-act="back">戻る</button><button class="pri" data-act="send">送る</button></div>';
+  } else if (S.step === "ok") {
+    h += '<div class="okbig">&#10003;</div><div style="text-align:center;font-size:14px">' + (S.api ? 'Wixに発送を登録しました' : 'Wixに入っているのを確認しました') + '</div><div class="trbig num" style="font-size:20px">' + fmtTr(S.tracking) + '</div>';
+    if (S.x.bo) h += '<div class="warn">BOの出荷です。入出庫ログに「出荷（BO消込）」を入れてください。</div>';
+    h += '<div class="smbtns"><button class="pri" data-act="close">閉じる</button></div>';
+  } else if (S.step === "err") {
+    h += '<div class="smmsg">' + esc(S.msg) + '</div><div class="smbtns"><button data-act="close">閉じる</button><button class="pri" data-act="back">戻る</button></div>';
+  }
+  $("smbox").innerHTML = h;
+  if (S.step === "in") updTr();
+}
+function updTr(){
+  var n = SEND.tracking, ok = sagawaOk(n);
+  $("trst").innerHTML = !n ? '' : ok ? '<span style="color:var(--ok)">&#10003; 佐川の番号として正しい形です</span>' : '<span style="color:var(--neg)">' + (n.length !== 12 ? '12桁ではありません（' + n.length + '桁）' : '検査数字が合いません。読み間違いの可能性があります') + '</span>';
+  $("toCf").disabled = !ok;
+}
+function runServer(fn, args, ok, msg, onErr){
+  var S = SEND; S.step = "busy"; S.msg = msg; renderSend();
+  var ng = function(e){ if (onErr && SEND === S && onErr(e)) return; S.step = "err"; S.back = S.back || "in"; S.msg = (e && e.message) ? e.message : String(e); beep("ng"); if (SEND === S) renderSend(); };
+  if (!MOCK) call(fn, args).then(function(r){ if (SEND === S) ok(r); }, ng);
+  else setTimeout(function(){   // ローカル確認用
+    ok(fn === "orderStatus" ? { no: args[0], url: "https://manage.wix.com/", trackings: S.fakeDone ? [S.tracking] : [] } : true);
+  }, 300);
+}
+/**
+ * 発送連絡（v9 2026-10-03）: まずWix APIで送れるか確認（dry）→「送る」でAPI登録。
+ * 2026-10-03 22:07 に全商品の発送担当を「自己配送」にしたので、それ以降の注文はAPIで登録できる。
+ * それ以前の注文は明細に千葉配送センターの割当が残っていて Wix が弾く（Non matching fulfiller ids）
+ * → そのときとSKU違いのときは、従来の「番号を保存 → Wix画面で手入力 → 確認」に自動で切り替える。
+ */
+var KM_MANUAL_RE = /fulfiller|送れる明細/i;
+function shipReq(S, dry){ return [{ no: S.x.o.no, skus: S.x.lines.map(function(l){ return l.sku; }), tracking: S.tracking, dry: dry }]; }
+function saveTracking(){
+  var S = SEND; S.back = "in";
+  runServer("sendShipment", shipReq(S, true), function(r){
+    S.preview = (r && r.lines) ? r : null; S.step = "cf"; S.msg = ""; beep("scan"); renderSend();
+  }, "Wixの注文を確認中…", function(e){
+    var m = (e && e.message) ? e.message : String(e);
+    if (!KM_MANUAL_RE.test(m)) return false;
+    manualSave(S, "この注文はAPIで登録できないので、Wixの画面で入力してください。（" + m + "）"); return true;
+  });
+}
+function sendNow(){
+  var S = SEND; S.back = "in";
+  runServer("sendShipment", shipReq(S, false), function(r){
+    S.api = true; markSent(S, true); S.step = "ok"; renderSend();
+  }, "Wixに発送を登録中…", function(e){
+    var m = (e && e.message) ? e.message : String(e);
+    if (!KM_MANUAL_RE.test(m)) return false;
+    manualSave(S, "切替前の注文なのでAPIでは登録できませんでした。Wixの画面で入力してください。"); return true;
+  });
+}
+/** 番号を保存（その注文のWix画面URLも一緒に取っておく）＝手入力の流れ */
+function manualSave(S, why){
+  runServer("orderStatus", [S.x.o.no], function(r){
+    var t = getTr(); t[S.x.key] = { t: S.tracking, url: r.url }; lsSet("km_tr", t);
+    S.url = r.url; S.msg = why || ""; S.step = (r.trackings || []).indexOf(S.tracking) >= 0 ? "ok" : "go";
+    if (S.step === "ok") markSent(S); else beep("scan");
+    renderSend(); renderToday(); updateBadges();
+  }, "Wixの注文を確認中…");
+}
+function verifyTracking(){
+  var S = SEND;
+  runServer("orderStatus", [S.x.o.no], function(r){
+    if ((r.trackings || []).indexOf(S.tracking) >= 0) { markSent(S); S.step = "ok"; renderSend(); }
+    else { S.step = "go"; S.msg = "まだWixにこの番号が入っていません（Wix側の番号: " + ((r.trackings || []).map(fmtTr).join("、") || "なし") + "）。保存を押したか確認してください。"; beep("ng"); renderSend(); }
+  }, "Wixに入ったか確認中…");
+}
+function markSent(S, api){
+  var s = getSent(); s[S.x.key] = S.tracking; lsSet("km_sent", s);
+  var t = getTr(); delete t[S.x.key]; lsSet("km_tr", t);
+  beep("ok"); renderToday(); updateBadges();
+  if (!api && !MOCK)   // API送信はサーバー側で記録済み
+    call("logManualShipment", [S.x.o.no, S.tracking, S.x.lines.map(function(l){ return l.sku + "×" + l.qty; }).join(" ")]).catch(function(){});
+}
+async function scanTracking(file){
+  SEND.msg = "読み取り中…"; SEND.cands = null; renderSend();
+  var img = await loadImage(file), hit = "";
+  if ("BarcodeDetector" in window) {
+    try { (await new BarcodeDetector().detect(img)).forEach(function(b){ if (!hit) hit = pickSagawa(b.rawValue); }); } catch (e) {}
+  }
+  if (!hit && window.ZXing) {
+    var hints = new Map(); hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+    var reader = new ZXing.BrowserMultiFormatReader(hints), sizes = [1600, 1000];
+    for (var i = 0; i < sizes.length && !hit; i++) {
+      try { var r = await reader.decodeFromImageUrl(toCanvas(img, sizes[i]).toDataURL("image/jpeg", 0.92)); hit = pickSagawa(r.getText()); } catch (e) {}
+    }
+  }
+  var cands = hit ? [hit] : [];
+  if (!hit) {                                              // バーコードが無い（ご依頼主控えなど）→ 印字の数字を読む
+    if (!SEND) return;
+    SEND.msg = "数字を読み取り中…（初回は10秒ほどかかります）"; renderSend();
+    try { cands = await ocrTracking(img); } catch (e) { cands = []; SEND && (SEND.ocrErr = String(e && e.message || e)); }
+  }
+  if (!SEND) return;
+  if (cands.length === 1) { SEND.tracking = cands[0]; SEND.msg = hit ? "" : "印字から読み取りました。伝票の番号と同じか目で確かめてください。"; beep("scan"); }
+  else if (cands.length > 1) { SEND.cands = cands; SEND.msg = "番号らしい数字が" + cands.length + "つ見つかりました。伝票と同じものを選んでください。"; beep("scan"); }
+  else { beep("ng"); SEND.msg = "伝票番号を読み取れませんでした。番号が大きく・まっすぐ写るように撮り直すか、12桁を手で入力してください。" + (SEND.ocrErr ? "（" + SEND.ocrErr + "）" : ""); }
+  renderSend();
+}
+
+/* 文字認識（Tesseract.js）。部品は初回に読み込み、以後は使い回す */
+var TESS = null;
+function loadTess(){
+  if (window.Tesseract) return Promise.resolve();
+  return new Promise(function(ok, ng){
+    var s = document.createElement("script");
+    s.src = "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
+    s.onload = ok; s.onerror = function(){ ng(new Error("文字認識の部品を読み込めませんでした（電波を確認）")); };
+    document.head.appendChild(s);
+  });
+}
+async function tessWorker(){
+  if (TESS) return TESS;
+  await loadTess();
+  TESS = await Tesseract.createWorker("eng");
+  await TESS.setParameters({ tessedit_char_whitelist: "0123456789-", preserve_interword_spaces: "1" });
+  return TESS;
+}
+/** 白黒にしてコントラストを上げたキャンバス（deg度回転） */
+function ocrCanvas(img, deg){
+  var max = 2000, r = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+  var w = Math.round(img.naturalWidth * r), h = Math.round(img.naturalHeight * r);
+  var c = document.createElement("canvas"), side = deg % 180 === 0;
+  c.width = side ? w : h; c.height = side ? h : w;
+  var g = c.getContext("2d");
+  g.translate(c.width / 2, c.height / 2); g.rotate(deg * Math.PI / 180); g.drawImage(img, -w / 2, -h / 2, w, h);
+  var d = g.getImageData(0, 0, c.width, c.height), p = d.data;
+  for (var i = 0; i < p.length; i += 4) {
+    var y = 0.299 * p[i] + 0.587 * p[i + 1] + 0.114 * p[i + 2];
+    y = y < 110 ? 0 : y > 170 ? 255 : (y - 110) * 255 / 60;
+    p[i] = p[i + 1] = p[i + 2] = y;
+  }
+  g.putImageData(d, 0, 0);
+  return c;
+}
+/** 認識した文字から佐川の12桁の候補を集める。行ごとにちょうど12桁のものを優先する */
+function sagawaCands(text){
+  var best = [], more = [];
+  String(text || "").split(String.fromCharCode(10)).forEach(function(line){
+    var d = line.replace(/[^0-9]/g, "");
+    if (sagawaOk(d)) { if (best.indexOf(d) < 0) best.push(d); return; }
+    for (var i = 0; i + 12 <= d.length; i++) { var w = d.slice(i, i + 12); if (sagawaOk(w) && more.indexOf(w) < 0) more.push(w); }
+  });
+  return best.length ? best : more;
+}
+async function ocrTracking(img){
+  var w = await tessWorker();
+  var degs = [0, 90, 270];
+  for (var i = 0; i < degs.length; i++) {
+    var res = await w.recognize(ocrCanvas(img, degs[i]));
+    var c = sagawaCands(res && res.data ? res.data.text : "");
+    if (c.length) return c.slice(0, 4);
+  }
+  return [];
+}
+
+function loadImage(file){ return new Promise(function(ok, ng){ var img = new Image(); img.onload = function(){ ok(img); }; img.onerror = ng; img.src = URL.createObjectURL(file); }); }
+function toCanvas(img, max){
+  var r = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+  var c = document.createElement("canvas"); c.width = Math.round(img.naturalWidth * r); c.height = Math.round(img.naturalHeight * r);
+  c.getContext("2d").drawImage(img, 0, 0, c.width, c.height); return c;
+}
+
+/* ---------- 伝票用リスト（印刷） ---------- */
+function printLabels(btn){
+  var P = shipPlan(), sent = getSent();
+  var list = P.gm.filter(function(x){ return !sent[x.key]; });
+  if (!list.length) { alert("印刷する注文がありません"); return; }
+  var nos = list.map(function(x){ return x.o.no; }).filter(function(n){ return /^[0-9]+$/.test(n); });
+  btn.disabled = true; btn.textContent = "Wixから宛先を取得中…";
+  var done = function(labels){
+    btn.disabled = false; btn.textContent = "伝票用リストを印刷";
+    var by = {};
+    (labels || []).forEach(function(l){ by[l.no] = l; });
+    $("print").innerHTML = printHtml(list, by);
+    setTimeout(function(){ window.print(); }, 300);
+  };
+  var fail = function(e){ btn.disabled = false; btn.textContent = "伝票用リストを印刷"; alert("宛先を取得できませんでした: " + (e && e.message ? e.message : e)); };
+  if (!MOCK) call("getShipLabels", [nos]).then(done, fail);
+  else done(list.map(function(x){ return { no: x.o.no, name: x.o.who, phone: "090-0000-0000", zip: "100-0001", addr: x.o.pref + "テスト市1-2-3", addr2: "テストマンション101", ship: x.o.ship, note: "" }; }));
+}
+function printHtml(list, by){
+  var today = D.now.slice(0, 10).replace(/-/g, "/");
+  var h = '<div class="ph"><b>出荷リスト（群馬）</b>　' + today + '　' + list.length + '件</div>';
+  list.forEach(function(x, i){
+    var l = by[x.o.no] || {};
+    h += '<div class="pb"><div class="pr1"><span class="pck">□</span><span class="pno">' + (i + 1) + '. #' + esc(x.o.no) + '</span><span>' + md(x.o.d) + ' 受注</span>' + (x.bo ? '<span>【BO入荷分】</span>' : '') + '<span class="psh">' + esc(l.ship || x.o.ship || '') + '</span></div>';
+    if (l.zip || l.addr) {
+      h += '<div class="pad">〒' + esc(l.zip) + '　' + esc(l.addr) + (l.addr2 ? ' ' + esc(l.addr2) : '') + '</div>';
+      h += '<div class="pnm">' + esc(l.name || x.o.who) + ' 様' + (l.company ? '（' + esc(l.company) + '）' : '') + '<span class="ptel">TEL ' + esc(l.phone || '―') + '</span></div>';
+    } else {
+      h += '<div class="pad">（宛先をWixから取得できませんでした。Wixの注文画面で確認）　' + esc(x.o.who) + ' 様 ・ ' + esc(x.o.pref) + '</div>';
+    }
+    x.lines.forEach(function(ln){
+      h += '<div class="pit">・' + esc(ln.name) + (ln.opt ? '　［' + esc(ln.opt) + '］' : '') + '　<b>×' + ln.qty + '</b>　<span class="psk">' + esc(ln.sku) + '</span></div>';
+    });
+    if (l.note) h += '<div class="pnt">備考: ' + esc(l.note) + '</div>';
+    h += '<div class="ptr">佐川 伝票番号：＿＿＿＿＿＿＿＿＿＿＿＿＿＿</div></div>';
+  });
+  return h;
+}
+
+/* ---------- 入出庫 ---------- */
+function renderMoves(){
+  var pend = pending();
+  var h = '<div class="health"><div><div class="l">反映待ち</div><div class="v num ' + (pend.length ? 'zl' : 'z0') + '">' + pend.length + '件</div></div>';
+  var lastDone = ""; D.moves.forEach(function(r){ if (r[10]) lastDone = r[10]; });
+  h += '<div><div class="l">最後の反映</div><div class="v num">' + esc(lastDone || "—") + '</div></div>';
+  h += '<div><div class="l">反映の間隔</div><div class="v num">10分</div></div></div>';
+  h += '<a class="btn" href="' + esc(D.mikura) + '" target="_top">MIKURAで棚卸を入力する</a>';
+  if (GAS) h += '<button class="btn" style="width:100%;font-family:inherit" data-pairqr="1">スマホアプリと連携（QRを表示）</button><div id="pairqr"></div>';
+  else if (!MOCK) h += '<button class="btn" style="width:100%;font-family:inherit" data-unpair="1">このスマホの連携を解除</button>';
+  h += '<div class="sec">直近の入出庫</div>';
+  if (!D.moves.length) h += '<div class="empty">記録はありません</div>';
+  D.moves.slice().reverse().forEach(function(r){
+    var st = r[9], err = /エラー|失敗|error/i.test(r[11]);
+    var stTag = !st ? '<span class="tag wt">反映待ち</span>' : st === "取消" ? '<span class="tag">取消</span>' : err ? '<span class="tag ng">' + esc(st) + '</span>' : '<span class="tag ok">' + esc(st) + '</span>';
+    var name = r[5] ? r[5].split("｜")[0].trim() : (BY[r[4]] ? BY[r[4]][1] : r[4]);
+    var sign = /入荷|返品|棚卸/.test(r[1]) ? "" : /BO計上/.test(r[1]) ? "BO+" : "−";
+    h += '<div class="row' + (err ? ' bad' : !st ? ' wait' : '') + '"><span class="q num">' + (r[1].indexOf("棚卸") >= 0 ? '=' : sign) + r[6] + '</span>';
+    h += '<div class="t"><span>' + md(r[0]) + '</span><span class="tag kg">' + esc(r[1]) + '</span>' + siteTag(r[2]) + (r[3] ? '→' + siteTag(r[3]) : '') + stTag + '</div>';
+    h += '<div class="n">' + esc(name) + '</div>';
+    var meta = [r[4], r[7], r[8]].filter(function(x){ return x; }).join(" ・ ");
+    if (meta) h += '<div class="m">' + esc(meta) + '</div>';
+    if (r[11]) h += '<div class="m" style="' + (err ? 'color:var(--neg)' : '') + '">' + esc(r[10]) + ' ' + esc(r[11]) + '</div>';
+    h += '</div>';
+  });
+  $("v-moves").innerHTML = h;
+}
+
+/* ---------- Wix同期 ---------- */
+function renderSync(){
+  var rows = D.sync.slice().reverse();
+  var bad = rows.filter(function(r){ return isBad(r[2]); });
+  var h = '<div class="health"><div><div class="l">最終同期</div><div class="v num">' + esc(rows.length ? rows[0][0] : "—") + '</div></div>';
+  h += '<div><div class="l">直近80件の異常</div><div class="v num ' + (bad.length ? 'zn' : 'z0') + '">' + bad.length + '件</div></div>';
+  h += '<div><div class="l">在庫プッシュ成功</div><div class="v num zp">' + rows.filter(function(r){ return r[2] === "wix_push_ok"; }).length + '件</div></div></div>';
+  h += '<div class="sec">Wix同期ログ（新しい順）</div>';
+  rows.forEach(function(r){
+    var b = isBad(r[2]), ok = r[2] === "wix_push_ok" || r[2] === "decremented";
+    var it = BY[r[3]];
+    h += '<div class="row' + (b ? ' bad' : '') + '"><div class="t"><span>' + esc(r[0]) + '</span><span class="tag ' + (b ? 'ng' : ok ? 'ok' : '') + '">' + esc(r[2]) + '</span>' + (r[1] ? '<span>' + esc(r[1]) + '</span>' : '') + '</div>';
+    if (r[3]) h += '<div class="n">' + esc(it ? it[1] : r[3]) + '</div>';
+    if (r[4] || r[3]) h += '<div class="m">' + esc([r[3], r[4]].filter(function(x){ return x; }).join(" ・ ")) + '</div>';
+    h += '</div>';
+  });
+  h += '<div class="foot">wix_push_ok＝Wixへ在庫を送れた／decremented＝受注で減算／wix_push_sku_not_found＝Wixに無いSKU（正常）。同期できたかの判定はGASの実行数ではなくこのログで見ます。</div>';
+  $("v-sync").innerHTML = h;
+}
+
+/* ---------- 画面切替 ---------- */
+function render(){
+  if (view === "today") renderToday();
+  if (view === "cb") renderCb();
+  if (view === "bo") renderBo();
+  if (view === "stock") renderStock();
+  if (view === "log") { if (logv === "moves") renderMoves(); else renderSync(); }
+}
+function show(v){
+  view = v;
+  Array.prototype.forEach.call(document.querySelectorAll("#nav button"), function(b){ b.classList.toggle("on", b.getAttribute("data-v") === v); });
+  Array.prototype.forEach.call(document.querySelectorAll(".view"), function(s){ s.classList.toggle("on", s.id === "v-" + v); });
+  window.scrollTo(0, 0);
+  if (D) render();
+}
+function chipOn(id, b){ Array.prototype.forEach.call(document.querySelectorAll("#" + id + " button"), function(x){ x.classList.toggle("on", x === b); }); }
+
+$("nav").addEventListener("click", function(e){ var b = e.target.closest("button"); if (b) show(b.getAttribute("data-v")); });
+$("reload").addEventListener("click", load);
+$("v-today").addEventListener("click", function(e){
+  var sb = e.target.closest("[data-send]"); if (sb) { openSend(sb.getAttribute("data-send")); return; }
+  var pb = e.target.closest("[data-print]"); if (pb) { printLabels(pb); return; }
+  var r = e.target.closest("[data-pk]"); if (!r) return;
+  var p = getPacked(), k = r.getAttribute("data-pk"); if (p[k]) delete p[k]; else p[k] = 1; setPacked(p); renderToday(); updateBadges();
+});
+$("smbox").addEventListener("click", function(e){
+  unlockAudio();
+  var li = e.target.closest("[data-li]");
+  if (li) { SEND.lines[+li.getAttribute("data-li")].on = li.checked; updTr(); return; }
+  var b = e.target.closest("[data-act]"); if (!b || !SEND) return;
+  var act = b.getAttribute("data-act");
+  if (act === "close") closeSend();
+  else if (act === "cam") {
+    if (!canLive()) { $("cam").value = ""; $("cam").click(); return; }
+    liveScan({ title: "伝票のバーコードを枠に入れてください", pick: pickSagawa, photo: true }).then(function(v){
+      if (!v || !SEND) return;
+      SEND.tracking = v; SEND.cands = null; SEND.msg = ""; beep("scan"); renderSend();
+    });
+  }
+  else if (act === "save") saveTracking();
+  else if (act === "pick") { SEND.tracking = b.getAttribute("data-v"); SEND.cands = null; SEND.msg = "伝票の番号と同じか目で確かめてください。"; renderSend(); }
+  else if (act === "open") { var ok = copyText(SEND.tracking); window.open(SEND.url, "_blank"); SEND.msg = ok ? "" : "コピーできなかったので、番号は手で入れてください: " + fmtTr(SEND.tracking); renderSend(); }
+  else if (act === "verify") verifyTracking();
+  else if (act === "send") sendNow();
+  else if (act === "redo") { SEND.step = "in"; SEND.msg = ""; renderSend(); }
+  else if (act === "back") { SEND.step = SEND.url ? "go" : "in"; SEND.msg = ""; renderSend(); }
+});
+$("smbox").addEventListener("input", function(e){
+  if (e.target.id !== "trin") return;
+  SEND.tracking = e.target.value.replace(/[^0-9]/g, "").slice(0, 14); updTr();
+});
+$("cam").addEventListener("change", function(){ var f = this.files && this.files[0]; if (f && SEND) scanTracking(f); });
+$("v-bo").addEventListener("click", function(e){ var c = e.target.closest(".bosku"); if (c) c.classList.toggle("open"); });
+$("logseg").addEventListener("click", function(e){
+  var b = e.target.closest("button"); if (!b) return;
+  logv = b.getAttribute("data-v"); chipOn("logseg", b);
+  $("v-moves").style.display = logv === "moves" ? "" : "none"; $("v-sync").style.display = logv === "sync" ? "" : "none";
+  render();
+});
+$("v-moves").addEventListener("click", function(e){
+  if (e.target.closest("[data-pairqr]")) showPairQr();
+  if (e.target.closest("[data-unpair]") && confirm("このスマホの連携を解除しますか？（もう一度QRを読めば戻せます）")) {
+    try { localStorage.removeItem("km_key"); localStorage.removeItem("km_last"); } catch (x) {}
+    location.reload();
+  }
+});
+$("q").addEventListener("input", renderStock);
+$("sum").addEventListener("click", function(e){ var b = e.target.closest("button"); if (!b) return; var v = b.getAttribute("data-v"); fil = fil === v ? "all" : v; renderStock(); });
+$("cars").addEventListener("click", function(e){ var b = e.target.closest("button"); if (!b) return; car = b.getAttribute("data-v"); chipOn("cars", b); renderStock(); });
+$("sites").addEventListener("click", function(e){ var b = e.target.closest("button"); if (!b) return; site = b.getAttribute("data-v"); chipOn("sites", b); renderStock(); });
+
+
+/* ---------- 連携（アプリ側） ---------- */
+function showPair(msg){
+  $("loading").style.display = "none";
+  var h = '<svg class="logo" viewBox="0 0 32 32" style="width:48px;height:48px"><rect x="4" y="4" width="24" height="24" rx="6" fill="none" stroke="#5eead4" stroke-width="2.4"/><path d="M8 24 L24 8" stroke="#5eead4" stroke-width="2.4" stroke-linecap="round"/></svg>';
+  h += '<h2>カゲヌイとつなぐ</h2>';
+  h += '<ol><li>パソコンで、いつもの「カゲヌイ モバイル」を開く</li><li>下の「ログ」→「入出庫」→「スマホアプリと連携」を押す</li><li>出てきたQRを、下のボタンで読む</li></ol>';
+  if (canLive()) h += '<button class="bigbtn" id="pairscan">QRを読む</button>';
+  h += '<textarea id="pairin" placeholder="または合言葉（64文字）を貼り付け" autocapitalize="off" autocomplete="off" spellcheck="false"></textarea>';
+  h += '<button class="btn" style="width:100%;font-family:inherit" id="pairsave">この合言葉でつなぐ</button>';
+  if (msg) h += '<div class="smmsg">' + esc(msg) + '</div>';
+  $("pair").innerHTML = h; $("pair").style.display = "block";
+  var sc = $("pairscan");
+  if (sc) sc.onclick = function(){
+    unlockAudio();
+    liveScan({ title: "パソコンのQRを枠に入れてください", pick: pairKeyOf, qr: true }).then(function(k){ if (k) pairWith(k); });
+  };
+  $("pairsave").onclick = function(){ var k = pairKeyOf($("pairin").value); if (k) pairWith(k); else showPair("合言葉の形が違います（64文字の英数字）"); };
+}
+function pairKeyOf(raw){ var m = /([0-9a-f]{64})/.exec(String(raw || "").trim()); return m ? m[1] : ""; }
+function pairWith(k){
+  try { localStorage.setItem("km_key", k); } catch (e) {}
+  beep("ok"); $("pair").style.display = "none"; $("loading").style.display = ""; load();
+}
+
+/* ---------- 連携（パソコンの従来画面側）: QRを出す ---------- */
+function showPairQr(){
+  var box = $("pairqr"); box.innerHTML = '<div class="empty">合言葉を用意しています…</div>';
+  var lib = window.qrcode ? Promise.resolve() : new Promise(function(ok, ng){
+    var s = document.createElement("script"); s.src = "https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"; s.onload = ok; s.onerror = ng; document.head.appendChild(s);
+  });
+  Promise.all([MOCK ? Promise.resolve({ key: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" }) : call("getPairing"), lib]).then(function(a){
+    var url = APP_URL + "#k=" + a[0].key, q = qrcode(0, "M"); q.addData(url); q.make();
+    box.innerHTML = '<div class="qrbox">' + q.createSvgTag({ cellSize: 4, margin: 2, scalable: true }) + '</div>' +
+      '<div class="foot" style="margin:4px 2px">Android: カメラでこのQRを読む → 開いたページでChromeのメニュー「アプリをインストール」。<br>iPhone: 先にSafariで ' + esc(APP_URL) + ' を開いて「共有 → ホーム画面に追加」→ ホーム画面のアプリから「QRを読む」。<br>この合言葉は人に見せないでください。漏れたらスクリプトプロパティの PWA_KEY を消せば全端末が無効になります。</div>';
+  }).catch(function(e){ box.innerHTML = '<div class="alert">連携の準備に失敗しました: ' + esc(e && e.message || e) + '</div>'; });
+}
+
+/* ---------- カメラ（常時映像でバーコード／QRを読む。アプリのときだけ） ----------
+ * GASの画面はiframeにカメラ許可が無いので、従来どおり写真を撮って読む（#cam）。
+ * 読み方: BarcodeDetector（Android）→ 無ければ ZXing（iPhone）。佐川の伝票はNW-7（Codabar）。
+ */
+function canLive(){ return !GAS && !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia); }
+var SCAN = null;
+function liveScan(o){
+  return new Promise(function(resolve){
+    var v = $("scanv"), st = $("scanst"), bar = $("scanbar"), stream = null, timer = 0, done = false, det = null, zx = null, cv = document.createElement("canvas");
+    function finish(val){
+      if (done) return; done = true; clearTimeout(timer);
+      try { stream && stream.getTracks().forEach(function(t){ t.stop(); }); } catch (e) {}
+      v.srcObject = null; $("scan").style.display = "none"; SCAN = null; resolve(val || "");
+    }
+    SCAN = finish;
+    st.textContent = "カメラを起動中…";
+    bar.innerHTML = '<button data-sc="close">やめる</button>' + (o.photo ? '<button data-sc="photo">写真で撮る（控えの文字）</button>' : '') + '<button data-sc="torch" style="display:none">ライト</button>';
+    $("scan").style.display = "flex";
+    bar.onclick = function(e){
+      var b = e.target.closest("[data-sc]"); if (!b) return;
+      var a = b.getAttribute("data-sc");
+      if (a === "close") finish("");
+      else if (a === "photo") { finish(""); $("cam").value = ""; $("cam").click(); }   // タップの流れのまま開く
+      else if (a === "torch" && stream) { var t = stream.getVideoTracks()[0]; b.classList.toggle("pri"); t.applyConstraints({ advanced: [{ torch: b.classList.contains("pri") }] }).catch(function(){}); }
+    };
+    if ("BarcodeDetector" in window) { try { det = new BarcodeDetector(); } catch (e) {} }
+    if (!det && window.ZXing) {
+      var hints = new Map();
+      hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, o.qr ? [ZXing.BarcodeFormat.QR_CODE] :
+        [ZXing.BarcodeFormat.CODABAR, ZXing.BarcodeFormat.CODE_128, ZXing.BarcodeFormat.ITF, ZXing.BarcodeFormat.CODE_39, ZXing.BarcodeFormat.QR_CODE]);
+      hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+      zx = new ZXing.MultiFormatReader(); zx.setHints(hints);
+    }
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false }).then(function(s){
+      if (done) { s.getTracks().forEach(function(t){ t.stop(); }); return; }
+      stream = s; v.srcObject = s; v.play().catch(function(){});
+      st.textContent = o.title;
+      try { var cap = s.getVideoTracks()[0].getCapabilities(); if (cap && cap.torch) bar.querySelector('[data-sc="torch"]').style.display = ""; } catch (e) {}
+      tick();
+    }).catch(function(e){
+      st.textContent = "カメラを使えません（" + (e && e.name || e) + "）。設定でカメラを許可するか、写真で撮ってください。";
+    });
+    async function tick(){
+      if (done) return;
+      var hit = "";
+      if (v.readyState >= 2 && v.videoWidth) {
+        try {
+          if (det) {
+            (await det.detect(v)).forEach(function(b){ if (!hit) hit = o.pick(b.rawValue); });
+          } else if (zx) {
+            var w = Math.min(1280, v.videoWidth), h = Math.round(v.videoHeight * w / v.videoWidth);
+            cv.width = w; cv.height = h; cv.getContext("2d").drawImage(v, 0, 0, w, h);
+            try {
+              var r = zx.decode(new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(new ZXing.HTMLCanvasElementLuminanceSource(cv))));
+              hit = o.pick(r.getText());
+            } catch (x) {}
+          }
+        } catch (e) {}
+      }
+      if (hit) { if (navigator.vibrate) navigator.vibrate(40); finish(hit); return; }
+      timer = setTimeout(tick, det ? 120 : 220);
+    }
+  });
+}
+
+/* ---------- アプリとしての起動 ---------- */
+if (!GAS && "serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(function(){});
+document.addEventListener("visibilitychange", function(){   // 5分以上たって前に戻ってきたら取り直す
+  if (document.visibilityState === "visible" && D && !SEND && !SCAN && Date.now() - LOADED_AT > 5 * 60000) load();
+});
+if (!GAS && !MOCK && !apiKey()) showPair();
+else load();
+</script>
+</body>
+</html>
