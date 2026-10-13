@@ -424,13 +424,18 @@ function shipPlan(){
     orders[no].lines.push({ sku: r[4], name: (BY[r[4]] && BY[r[4]][1]) || r[5] || r[4], qty: r[6], opt: r[9] || "", done: r[10] == null ? null : r[10] });
   });
 
+  // 出荷元振替リストにある明細は、マスターの出荷担当ではなく「実際の出荷元」で振り分ける
+  var rr = {};
+  (D.reroute || []).forEach(function(r){ var t = String(r[2]); rr[normNo(r[0]) + "|" + r[1]] = t.indexOf("群馬") >= 0 ? "群馬" : t.indexOf("千葉") >= 0 ? "千葉" : ""; });
+  var siteFor = function(no, sku){ return rr[no + "|" + sku] || siteOf(sku); };
+
   var gm = [], cb = [], unknown = [], shippedPartial = 0;
   list.forEach(function(o){
     var g = [], c = [];
     o.lines.forEach(function(l){
       if (boKey[o.no + "|" + l.sku] || (!BY[l.sku] && boNo[o.no])) return;   // BO側で扱う
       if (l.qty <= 0 || (o.partial && l.done == null)) { shippedPartial++; return; }   // 発送済みの明細
-      var s = siteOf(l.sku);
+      var s = siteFor(o.no, l.sku);
       if (s === "群馬") g.push(l); else if (s === "千葉") c.push(l); else unknown.push({ o: o, l: l });
     });
     if (g.length) gm.push({ key: o.no, o: o, lines: g, bo: false });
@@ -445,7 +450,7 @@ function shipPlan(){
       left[b.sku] -= b.qty;
       var o = orders[b.no] || { no: b.no, d: b.d, who: b.who, pref: "", ship: "" };
       var x = { key: "BO|" + b.no + "|" + b.sku, o: o, lines: [b], bo: true };
-      if (siteOf(b.sku) === "群馬") gm.push(x); else cb.push(x);
+      if (siteFor(b.no, b.sku) === "群馬") gm.push(x); else cb.push(x);
     } else wait.push(b);
   });
   var byDate = function(a, b){ return a.o.d < b.o.d ? -1 : 1; };
