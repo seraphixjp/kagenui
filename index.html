@@ -201,6 +201,7 @@ header{padding-top:calc(10px + env(safe-area-inset-top))}
 #scan .bar button.pri{background:var(--kg);color:#0a0c10;border:none;font-weight:700}
 .qrbox{background:#fff;border-radius:14px;padding:14px;margin:10px auto;max-width:260px}
 .qrbox svg{display:block;width:100%;height:auto}
+body.chiba #nav button:not([data-v="cb"]){display:none}
 #err{display:none;margin:16px;padding:12px;border-radius:12px;border:1px solid rgba(248,113,113,.4);color:var(--neg);font-size:13px}
 </style>
 </head>
@@ -258,6 +259,7 @@ header{padding-top:calc(10px + env(safe-area-inset-top))}
 
 <script>
 var D = null, view = "today", fil = "all", car = "", site = "", logv = "moves";
+var CHIBA = false;   // 蔡さん用の合言葉で開いたとき（千葉出荷だけ）
 var BY = {}, UN = {};
 
 /* ---------- サーバー呼び出し（2026-10-03 アプリ化） ----------
@@ -265,7 +267,7 @@ var BY = {}, UN = {};
  * スマホアプリ（GitHub Pages）… 「全員」デプロイの doPost に合言葉付きで fetch
  * パソコンのローカル確認     … mock.json（合言葉が無いときだけ）
  */
-var API_URL = "__API_URL__";       // アプリ用APIデプロイの /exec（秘密ではない。合言葉が無いと何も返さない）
+var API_URL = "https://script.google.com/macros/s/AKfycbypCeryE2LmryijkwLNErtpvZ5lp2EZggcAvmMtg-Yp1o8qwSavu8WQGjy6ZFMuWdfC/exec";       // アプリ用APIデプロイの /exec（秘密ではない。合言葉が無いと何も返さない）
 var APP_URL = "https://seraphixjp.github.io/kagenui/";
 var GAS = !!(window.google && google.script && google.script.run);
 var LOCAL = location.protocol === "file:" || /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
@@ -326,12 +328,16 @@ function load(){
 
 function init(){
   $("err").style.display = "none";
+  CHIBA = D.role === "chiba";
+  document.body.classList.toggle("chiba", CHIBA);
+  if (CHIBA && view !== "cb") { view = "cb"; show("cb"); }
   BY = {}; UN = {};
   D.items.forEach(function(r){ BY[r[0]] = r; });
   D.unshipped.forEach(function(r){ UN[r[0]] = r; });
   var last = D.sync.length ? D.sync[D.sync.length - 1][0] : "—";
   var badSync = D.sync.slice(-20).filter(function(r){ return isBad(r[2]); }).length;
-  $("stamp").innerHTML = '<span class="ld" style="background:' + (badSync ? 'var(--neg)' : 'var(--ok)') + '"></span>最終同期 ' + esc(last) + '<br>表示 ' + esc(D.now.slice(5).replace("-", "/"));
+  $("stamp").innerHTML = CHIBA ? 'Wix取得 ' + esc(D.planAt || "—") + '<br>表示 ' + esc(D.now.slice(5).replace("-", "/")) :
+    '<span class="ld" style="background:' + (badSync ? 'var(--neg)' : 'var(--ok)') + '"></span>最終同期 ' + esc(last) + '<br>表示 ' + esc(D.now.slice(5).replace("-", "/"));
   // 車種チップ（マスターの並び順）
   var cars = [], seen = {};
   D.items.forEach(function(r){ if (r[2] && !seen[r[2]]) { seen[r[2]] = 1; cars.push(r[2]); } });
@@ -346,7 +352,8 @@ function updateBadges(){
   var P = shipPlan(), packed = getPacked();
   var sent = getSent();
   badge("b-today", P.gm.filter(function(x){ return !packed[x.key] && !sent[x.key]; }).length);
-  badge("b-cb", P.cb.filter(function(x){ return x.bo || daysAgo(String(x.o.d).slice(0, 10)) >= 3; }).length);
+  badge("b-cb", CHIBA ? P.cb.filter(function(x){ return !packed[x.key] && !sent[x.key]; }).length :
+    P.cb.filter(function(x){ return x.bo || daysAgo(String(x.o.d).slice(0, 10)) >= 3; }).length);
   badge("b-bo", P.wait.filter(function(b){ return b.due && daysAgo(b.due) > 0; }).length);
 }
 function badge(id, n){ var b = $(id); b.style.display = n ? "" : "none"; b.textContent = n > 99 ? "99+" : n; }
@@ -439,7 +446,7 @@ function shipPlan(){
       if (s === "群馬") g.push(l); else if (s === "千葉") c.push(l); else unknown.push({ o: o, l: l });
     });
     if (g.length) gm.push({ key: o.no, o: o, lines: g, bo: false });
-    if (c.length) cb.push({ o: o, lines: c, bo: false });
+    if (c.length) cb.push({ key: "C|" + o.no, o: o, lines: c, bo: false });
   });
 
   boRows.sort(function(a, b){ return a.d === b.d ? (a.no < b.no ? -1 : 1) : (a.d < b.d ? -1 : 1); });
@@ -484,19 +491,21 @@ function renderToday(){
   order.forEach(function(k){ var p = pick[k]; h += '<div class="ln"><span class="lq">×' + p.q + '</span><span class="lnm">' + esc(p.name) + (p.opt ? '<span class="lop">' + esc(p.opt) + '</span>' : '') + '<span class="lsk">' + esc(p.sku) + '</span></span></div>'; });
   h += '</div>';
   h += '<div class="sec">注文（タップで梱包済み → 伝票を読む → 発送登録）</div>';
-  P.gm.forEach(function(x){
-    var on = !!(packed[x.key] || sent[x.key]);
-    h += '<div class="ord ' + (x.bo ? 'bo' : 'gm') + (sent[x.key] ? ' done' : on ? ' packed' : '') + '" data-pk="' + esc(x.key) + '"><span class="ck">' + (on ? '&#10003;' : '') + '</span>' +
-      oHead(x.o, x.bo ? '<span class="tag bo">BO・入荷済み</span>' : '') + x.lines.map(oLine).join("") +
-      (x.bo ? '<div class="foot" style="margin:6px 0 0">出したら入出庫ログに「出荷（BO消込）」を入れる</div>' : '') +
-      '<div class="sendrow">' + (sent[x.key] ? '<span class="tag ok">発送連絡済み ' + fmtTr(sent[x.key]) + '</span>' :
-        !packed[x.key] ? '<button class="sendbtn" disabled>伝票を読む（梱包チェック後に押せます）</button>' :
-        trs[x.key] ? '<span class="tag wt" style="margin-right:auto;align-self:center">番号 ' + fmtTr(trs[x.key].t) + '</span><button class="sendbtn" data-send="' + esc(x.key) + '">Wixで入力</button>' :
-        '<button class="sendbtn" data-send="' + esc(x.key) + '">伝票を読む</button>') + '</div></div>';
-  });
+  P.gm.forEach(function(x){ h += ordCard(x, "gm", packed, sent, trs); });
   h += unknownBlock(P);
   h += '<div class="foot">チェックはこのスマホの中だけに残ります（日付が変わるとリセット）。お客様への発送連絡はWixで追跡番号を入れたときに飛びます。' + (P.shippedPartial ? '一部発送済みの注文で先に出た明細 ' + P.shippedPartial + '件は除いています（' + (/発送記録OK/.test(D.planState || "") ? 'Wixの発送記録で確認' : '発送記録が取れなかったので推定') + '）。' : '') + '</div>';
   $("v-today").innerHTML = h;
+}
+/** 出荷する注文のカード（タップで梱包チェック → 伝票を読む → 発送登録）。cls＝gm/cb */
+function ordCard(x, cls, packed, sent, trs, extra){
+  var on = !!(packed[x.key] || sent[x.key]);
+  return '<div class="ord ' + (x.bo ? 'bo' : cls) + (sent[x.key] ? ' done' : on ? ' packed' : '') + '" data-pk="' + esc(x.key) + '"><span class="ck">' + (on ? '&#10003;' : '') + '</span>' +
+    oHead(x.o, (x.bo ? '<span class="tag bo">BO・入荷済み</span>' : '') + (extra || '')) + x.lines.map(oLine).join("") +
+    (x.bo && !CHIBA ? '<div class="foot" style="margin:6px 0 0">出したら入出庫ログに「出荷（BO消込）」を入れる</div>' : '') +
+    '<div class="sendrow">' + (sent[x.key] ? '<span class="tag ok">発送連絡済み ' + fmtTr(sent[x.key]) + '</span>' :
+      !packed[x.key] ? '<button class="sendbtn" disabled>伝票を読む（梱包チェック後に押せます）</button>' :
+      trs[x.key] ? '<span class="tag wt" style="margin-right:auto;align-self:center">番号 ' + fmtTr(trs[x.key].t) + '</span><button class="sendbtn" data-send="' + esc(x.key) + '">Wixで入力</button>' :
+      '<button class="sendbtn" data-send="' + esc(x.key) + '">伝票を読む</button>') + '</div></div>';
 }
 function unknownBlock(P){
   if (!P.unknown.length) return "";
@@ -511,11 +520,16 @@ function renderCb(){
   var late = P.cb.filter(function(x){ return !x.bo && daysAgo(String(x.o.d).slice(0, 10)) >= 3; }).length;
   h += '<div class="health"><div><div class="l">千葉の未発送</div><div class="v num">' + P.cb.length + '件</div></div><div><div class="l">3日以上たった</div><div class="v num ' + (late ? 'zn' : 'z0') + '">' + late + '件</div></div><div><div class="l">入荷済みBO</div><div class="v num">' + P.cb.filter(function(x){ return x.bo; }).length + '件</div></div></div>';
   if (!P.cb.length) { $("v-cb").innerHTML = h + '<div class="empty">千葉の未発送はありません</div>'; return; }
+  var packed = getPacked(), sent = getSent(), trs = getTr();
+  if (CHIBA) h += '<button class="prbtn" data-print="cb">&#128424; 伝票用リストを印刷（住所・電話つき）</button>';
+  h += '<div class="sec">注文（タップで梱包済み → 伝票を読む → 発送登録）</div>';
   P.cb.forEach(function(x){
     var age = daysAgo(String(x.o.d).slice(0, 10)), lt = !x.bo && age >= 3;
-    h += '<div class="ord nock ' + (x.bo ? 'bo' : 'cb') + (lt ? ' bad' : '') + '">' + oHead(x.o, x.bo ? '<span class="tag bo">BO・入荷済み</span>' : lt ? '<span class="tag ng">' + age + '日経過・要確認</span>' : '') + x.lines.map(oLine).join("") + '</div>';
+    h += ordCard(x, "cb", packed, sent, trs, lt && !CHIBA ? '<span class="tag ng">' + age + '日経過・要確認</span>' : '');
   });
-  h += '<div class="foot">ティースリーが出す分。見守るだけで、こちらの作業はありません。集荷まで中1〜2日かかるので、受注から3日以上たったものを要確認にしています。「BO・入荷済み」は千葉にBOぶんの在庫が入ったもので、出荷されたか確認が要ります。</div>';
+  h += CHIBA ? '<div class="foot">梱包したら注文をタップ →「伝票を読む」で佐川の伝票番号を読み取り →「送る」でWixに発送が登録され、お客様に発送のお知らせメールが届きます。チェックはこのスマホの中だけに残ります。登録した注文は10分ほどで一覧から消えます。</div>' +
+      '<button class="btn" style="width:100%;font-family:inherit;margin-top:14px" data-unpair="1">このスマホの連携を解除</button>' :
+    '<div class="foot">ティースリーが出す分。蔡さんがアプリで伝票を読むと、10分ほどでここから消えます（伝票番号をもらったときは、ここで代わりに登録もできます）。集荷まで中1〜2日かかるので、受注から3日以上たったものを要確認にしています。「BO・入荷済み」は千葉にBOぶんの在庫が入ったもので、出荷されたか確認が要ります。</div>';
   $("v-cb").innerHTML = h;
 }
 
@@ -587,7 +601,7 @@ function copyText(t){
 }
 
 function openSend(key){
-  var x = shipPlan().gm.filter(function(g){ return g.key === key; })[0];
+  var P = shipPlan(), x = P.gm.concat(P.cb).filter(function(g){ return g.key === key; })[0];
   if (!x || !getPacked()[key]) return;                    // 梱包チェックが先
   var saved = getTr()[key];
   SEND = { x: x, tracking: saved ? saved.t : "", url: saved ? saved.url : "", step: saved ? "go" : "in", msg: "" };
@@ -624,7 +638,7 @@ function renderSend(){
     h += '<div class="smbtns"><button data-act="back">戻る</button><button class="pri" data-act="send">送る</button></div>';
   } else if (S.step === "ok") {
     h += '<div class="okbig">&#10003;</div><div style="text-align:center;font-size:14px">' + (S.api ? 'Wixに発送を登録しました' : 'Wixに入っているのを確認しました') + '</div><div class="trbig num" style="font-size:20px">' + fmtTr(S.tracking) + '</div>';
-    if (S.x.bo) h += '<div class="warn">BOの出荷です。入出庫ログに「出荷（BO消込）」を入れてください。</div>';
+    if (S.x.bo && !CHIBA) h += '<div class="warn">BOの出荷です。入出庫ログに「出荷（BO消込）」を入れてください。</div>';
     h += '<div class="smbtns"><button class="pri" data-act="close">閉じる</button></div>';
   } else if (S.step === "err") {
     h += '<div class="smmsg">' + esc(S.msg) + '</div><div class="smbtns"><button data-act="close">閉じる</button><button class="pri" data-act="back">戻る</button></div>';
@@ -660,6 +674,7 @@ function saveTracking(){
   }, "Wixの注文を確認中…", function(e){
     var m = (e && e.message) ? e.message : String(e);
     if (!KM_MANUAL_RE.test(m)) return false;
+    if (CHIBA) { S.step = "err"; S.msg = "この注文はアプリから登録できませんでした。伝票番号を鈴木さんに連絡してください。（" + m + "）"; beep("ng"); renderSend(); return true; }
     manualSave(S, "この注文はAPIで登録できないので、Wixの画面で入力してください。（" + m + "）"); return true;
   });
 }
@@ -670,6 +685,7 @@ function sendNow(){
   }, "Wixに発送を登録中…", function(e){
     var m = (e && e.message) ? e.message : String(e);
     if (!KM_MANUAL_RE.test(m)) return false;
+    if (CHIBA) { S.step = "err"; S.msg = "この注文はアプリから登録できませんでした。伝票番号を鈴木さんに連絡してください。（" + m + "）"; beep("ng"); renderSend(); return true; }
     manualSave(S, "切替前の注文なのでAPIでは登録できませんでした。Wixの画面で入力してください。"); return true;
   });
 }
@@ -679,7 +695,7 @@ function manualSave(S, why){
     var t = getTr(); t[S.x.key] = { t: S.tracking, url: r.url }; lsSet("km_tr", t);
     S.url = r.url; S.msg = why || ""; S.step = (r.trackings || []).indexOf(S.tracking) >= 0 ? "ok" : "go";
     if (S.step === "ok") markSent(S); else beep("scan");
-    renderSend(); renderToday(); updateBadges();
+    renderSend(); render(); updateBadges();
   }, "Wixの注文を確認中…");
 }
 function verifyTracking(){
@@ -692,7 +708,7 @@ function verifyTracking(){
 function markSent(S, api){
   var s = getSent(); s[S.x.key] = S.tracking; lsSet("km_sent", s);
   var t = getTr(); delete t[S.x.key]; lsSet("km_tr", t);
-  beep("ok"); renderToday(); updateBadges();
+  beep("ok"); render(); updateBadges();
   if (!api && !MOCK)   // API送信はサーバー側で記録済み
     call("logManualShipment", [S.x.o.no, S.tracking, S.x.lines.map(function(l){ return l.sku + "×" + l.qty; }).join(" ")]).catch(function(){});
 }
@@ -787,8 +803,8 @@ function toCanvas(img, max){
 
 /* ---------- 伝票用リスト（印刷） ---------- */
 function printLabels(btn){
-  var P = shipPlan(), sent = getSent();
-  var list = P.gm.filter(function(x){ return !sent[x.key]; });
+  var P = shipPlan(), sent = getSent(), cb = btn.getAttribute("data-print") === "cb";
+  var list = (cb ? P.cb : P.gm).filter(function(x){ return !sent[x.key]; });
   if (!list.length) { alert("印刷する注文がありません"); return; }
   var nos = list.map(function(x){ return x.o.no; }).filter(function(n){ return /^[0-9]+$/.test(n); });
   btn.disabled = true; btn.textContent = "Wixから宛先を取得中…";
@@ -796,16 +812,16 @@ function printLabels(btn){
     btn.disabled = false; btn.textContent = "伝票用リストを印刷";
     var by = {};
     (labels || []).forEach(function(l){ by[l.no] = l; });
-    $("print").innerHTML = printHtml(list, by);
+    $("print").innerHTML = printHtml(list, by, cb ? "千葉" : "群馬");
     setTimeout(function(){ window.print(); }, 300);
   };
   var fail = function(e){ btn.disabled = false; btn.textContent = "伝票用リストを印刷"; alert("宛先を取得できませんでした: " + (e && e.message ? e.message : e)); };
   if (!MOCK) call("getShipLabels", [nos]).then(done, fail);
   else done(list.map(function(x){ return { no: x.o.no, name: x.o.who, phone: "090-0000-0000", zip: "100-0001", addr: x.o.pref + "テスト市1-2-3", addr2: "テストマンション101", ship: x.o.ship, note: "" }; }));
 }
-function printHtml(list, by){
+function printHtml(list, by, where){
   var today = D.now.slice(0, 10).replace(/-/g, "/");
-  var h = '<div class="ph"><b>出荷リスト（群馬）</b>　' + today + '　' + list.length + '件</div>';
+  var h = '<div class="ph"><b>出荷リスト（' + where + '）</b>　' + today + '　' + list.length + '件</div>';
   list.forEach(function(x, i){
     var l = by[x.o.no] || {};
     h += '<div class="pb"><div class="pr1"><span class="pck">□</span><span class="pno">' + (i + 1) + '. #' + esc(x.o.no) + '</span><span>' + md(x.o.d) + ' 受注</span>' + (x.bo ? '<span>【BO入荷分】</span>' : '') + '<span class="psh">' + esc(l.ship || x.o.ship || '') + '</span></div>';
@@ -832,13 +848,14 @@ function renderMoves(){
   h += '<div><div class="l">最後の反映</div><div class="v num">' + esc(lastDone || "—") + '</div></div>';
   h += '<div><div class="l">反映の間隔</div><div class="v num">10分</div></div></div>';
   h += '<a class="btn" href="' + esc(D.mikura) + '" target="_top">MIKURAで棚卸を入力する</a>';
-  if (GAS) h += '<button class="btn" style="width:100%;font-family:inherit" data-pairqr="1">スマホアプリと連携（QRを表示）</button><div id="pairqr"></div>';
+  if (GAS) h += '<button class="btn" style="width:100%;font-family:inherit" data-pairqr="1">スマホアプリと連携（QRを表示）</button>' +
+    '<button class="btn" style="width:100%;font-family:inherit" data-pairqrcb="1">蔡さん用の連携（千葉出荷だけ）</button><div id="pairqr"></div>';
   else if (!MOCK) h += '<button class="btn" style="width:100%;font-family:inherit" data-unpair="1">このスマホの連携を解除</button>';
   h += '<div class="sec">直近の入出庫</div>';
   if (!D.moves.length) h += '<div class="empty">記録はありません</div>';
   D.moves.slice().reverse().forEach(function(r){
     var st = r[9], err = /エラー|失敗|error/i.test(r[11]);
-    var stTag = !st ? '<span class="tag wt">反映待ち</span>' : st === "取消" ? '<span class="tag">取消</span>' : err ? '<span class="tag ng">' + esc(st) + '</span>' : '<span class="tag ok">' + esc(st) + '</span>';
+    var stTag = !st ? '<span class="tag wt">反映待ち</span>' : st === "承認待ち" ? '<span class="tag wt">承認待ち（蔡さん・MIKURAで承認）</span>' : st === "取消" ? '<span class="tag">取消</span>' : err ? '<span class="tag ng">' + esc(st) + '</span>' : '<span class="tag ok">' + esc(st) + '</span>';
     var name = r[5] ? r[5].split("｜")[0].trim() : (BY[r[4]] ? BY[r[4]][1] : r[4]);
     var sign = /入荷|返品|棚卸/.test(r[1]) ? "" : /BO計上/.test(r[1]) ? "BO+" : "−";
     h += '<div class="row' + (err ? ' bad' : !st ? ' wait' : '') + '"><span class="q num">' + (r[1].indexOf("棚卸") >= 0 ? '=' : sign) + r[6] + '</span>';
@@ -924,6 +941,13 @@ $("smbox").addEventListener("input", function(e){
   SEND.tracking = e.target.value.replace(/[^0-9]/g, "").slice(0, 14); updTr();
 });
 $("cam").addEventListener("change", function(){ var f = this.files && this.files[0]; if (f && SEND) scanTracking(f); });
+$("v-cb").addEventListener("click", function(e){
+  var sb = e.target.closest("[data-send]"); if (sb) { openSend(sb.getAttribute("data-send")); return; }
+  var pb = e.target.closest("[data-print]"); if (pb) { printLabels(pb); return; }
+  if (e.target.closest("[data-unpair]")) { unpair(); return; }
+  var r = e.target.closest("[data-pk]"); if (!r) return;
+  var p = getPacked(), k = r.getAttribute("data-pk"); if (p[k]) delete p[k]; else p[k] = 1; setPacked(p); renderCb(); updateBadges();
+});
 $("v-bo").addEventListener("click", function(e){ var c = e.target.closest(".bosku"); if (c) c.classList.toggle("open"); });
 $("logseg").addEventListener("click", function(e){
   var b = e.target.closest("button"); if (!b) return;
@@ -933,11 +957,14 @@ $("logseg").addEventListener("click", function(e){
 });
 $("v-moves").addEventListener("click", function(e){
   if (e.target.closest("[data-pairqr]")) showPairQr();
-  if (e.target.closest("[data-unpair]") && confirm("このスマホの連携を解除しますか？（もう一度QRを読めば戻せます）")) {
-    try { localStorage.removeItem("km_key"); localStorage.removeItem("km_last"); } catch (x) {}
-    location.reload();
-  }
+  if (e.target.closest("[data-pairqrcb]")) showPairQr(true);
+  if (e.target.closest("[data-unpair]")) unpair();
 });
+function unpair(){
+  if (!confirm("このスマホの連携を解除しますか？（もう一度QRを読めば戻せます）")) return;
+  try { localStorage.removeItem("km_key"); localStorage.removeItem("km_last"); } catch (x) {}
+  location.reload();
+}
 $("q").addEventListener("input", renderStock);
 $("sum").addEventListener("click", function(e){ var b = e.target.closest("button"); if (!b) return; var v = b.getAttribute("data-v"); fil = fil === v ? "all" : v; renderStock(); });
 $("cars").addEventListener("click", function(e){ var b = e.target.closest("button"); if (!b) return; car = b.getAttribute("data-v"); chipOn("cars", b); renderStock(); });
@@ -949,7 +976,7 @@ function showPair(msg){
   $("loading").style.display = "none";
   var h = '<svg class="logo" viewBox="0 0 32 32" style="width:48px;height:48px"><rect x="4" y="4" width="24" height="24" rx="6" fill="none" stroke="#5eead4" stroke-width="2.4"/><path d="M8 24 L24 8" stroke="#5eead4" stroke-width="2.4" stroke-linecap="round"/></svg>';
   h += '<h2>カゲヌイとつなぐ</h2>';
-  h += '<ol><li>パソコンで、いつもの「カゲヌイ モバイル」を開く</li><li>下の「ログ」→「入出庫」→「スマホアプリと連携」を押す</li><li>出てきたQRを、下のボタンで読む</li></ol>';
+  h += '<ol><li>パソコンで、いつもの「カゲヌイ モバイル」を開く</li><li>下の「ログ」→「入出庫」→「スマホアプリと連携」を押す</li><li>出てきたQRを、下のボタンで読む</li></ol><div class="foot" style="margin:0 2px 10px">連携用のリンクをもらった方は、下の欄に貼り付けてください。</div>';
   if (canLive()) h += '<button class="bigbtn" id="pairscan">QRを読む</button>';
   h += '<textarea id="pairin" placeholder="または合言葉（64文字）を貼り付け" autocapitalize="off" autocomplete="off" spellcheck="false"></textarea>';
   h += '<button class="btn" style="width:100%;font-family:inherit" id="pairsave">この合言葉でつなぐ</button>';
@@ -969,13 +996,19 @@ function pairWith(k){
 }
 
 /* ---------- 連携（パソコンの従来画面側）: QRを出す ---------- */
-function showPairQr(){
+function showPairQr(cb){
   var box = $("pairqr"); box.innerHTML = '<div class="empty">合言葉を用意しています…</div>';
   var lib = window.qrcode ? Promise.resolve() : new Promise(function(ok, ng){
     var s = document.createElement("script"); s.src = "https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"; s.onload = ok; s.onerror = ng; document.head.appendChild(s);
   });
-  Promise.all([MOCK ? Promise.resolve({ key: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" }) : call("getPairing"), lib]).then(function(a){
+  Promise.all([MOCK ? Promise.resolve({ key: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" }) : call(cb ? "getPairingChiba" : "getPairing"), lib]).then(function(a){
     var url = APP_URL + "#k=" + a[0].key, q = qrcode(0, "M"); q.addData(url); q.make();
+    if (cb) {
+      box.innerHTML = '<div class="sec">蔡さん用（千葉出荷の一覧と発送登録だけ）</div><div class="qrbox">' + q.createSvgTag({ cellSize: 4, margin: 2, scalable: true }) + '</div>' +
+        '<textarea readonly style="width:100%;height:64px;font-size:11px;background:var(--card);color:var(--tx);border:1px solid var(--line);border-radius:10px;padding:8px" onclick="this.select()">' + esc(url) + '</textarea>' +
+        '<div class="foot" style="margin:4px 2px">このリンク（またはQR）を蔡さんに渡す。Android: 開いてChromeのメニュー「アプリをインストール」。iPhone: Safariで開いて「共有 → ホーム画面に追加」→ ホーム画面のアプリの欄にリンクを貼り付け。<br>見えるのは千葉が出す注文とBO入荷分だけ（群馬の注文・在庫・ログは出ません）。止めるときはスクリプトプロパティの PWA_KEY_CHIBA を消す（鈴木さんの端末はそのまま）。</div>';
+      return;
+    }
     box.innerHTML = '<div class="qrbox">' + q.createSvgTag({ cellSize: 4, margin: 2, scalable: true }) + '</div>' +
       '<div class="foot" style="margin:4px 2px">Android: カメラでこのQRを読む → 開いたページでChromeのメニュー「アプリをインストール」。<br>iPhone: 先にSafariで ' + esc(APP_URL) + ' を開いて「共有 → ホーム画面に追加」→ ホーム画面のアプリから「QRを読む」。<br>この合言葉は人に見せないでください。漏れたらスクリプトプロパティの PWA_KEY を消せば全端末が無効になります。</div>';
   }).catch(function(e){ box.innerHTML = '<div class="alert">連携の準備に失敗しました: ' + esc(e && e.message || e) + '</div>'; });
