@@ -719,11 +719,8 @@ async function scanTracking(file){
     try { (await new BarcodeDetector().detect(img)).forEach(function(b){ if (!hit) hit = pickSagawa(b.rawValue); }); } catch (e) {}
   }
   if (!hit && window.ZXing) {
-    var hints = new Map(); hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
-    var reader = new ZXing.BrowserMultiFormatReader(hints), sizes = [1600, 1000];
-    for (var i = 0; i < sizes.length && !hit; i++) {
-      try { var r = await reader.decodeFromImageUrl(toCanvas(img, sizes[i]).toDataURL("image/jpeg", 0.92)); hit = pickSagawa(r.getText()); } catch (e) {}
-    }
+    var zx = zxReader(false), sizes = [1600, 1000, 2400];
+    for (var i = 0; i < sizes.length && !hit; i++) hit = zxTry(zx, toCanvas(img, sizes[i]), pickSagawa);
   }
   var cands = hit ? [hit] : [];
   if (!hit) {                                              // バーコードが無い（ご依頼主控えなど）→ 印字の数字を読む
@@ -1018,11 +1015,29 @@ function showPairQr(cb){
  * GASの画面はiframeにカメラ許可が無いので、従来どおり写真を撮って読む（#cam）。
  * 読み方: BarcodeDetector（Android）→ 無ければ ZXing（iPhone）。佐川の伝票はNW-7（Codabar）。
  */
+/** ZXing の読み取り器。形式を明示しないと佐川のNW-7（Codabar）を読まない */
+function zxReader(qr){
+  var hints = new Map();
+  hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, qr ? [ZXing.BarcodeFormat.QR_CODE] :
+    [ZXing.BarcodeFormat.CODABAR, ZXing.BarcodeFormat.CODE_128, ZXing.BarcodeFormat.ITF, ZXing.BarcodeFormat.CODE_39, ZXing.BarcodeFormat.QR_CODE]);
+  hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+  var zx = new ZXing.MultiFormatReader(); zx.setHints(hints);
+  return zx;
+}
+/** キャンバスを2種類の白黒化で読む。decode() はヒントを消すので decodeWithState を使う */
+function zxTry(zx, canvas, pick){
+  var lum = new ZXing.HTMLCanvasElementLuminanceSource(canvas), hit = "";
+  [ZXing.HybridBinarizer, ZXing.GlobalHistogramBinarizer].some(function(B){
+    try { hit = pick(zx.decodeWithState(new ZXing.BinaryBitmap(new B(lum))).getText()); } catch (x) {}
+    return !!hit;
+  });
+  return hit;
+}
 function canLive(){ return !GAS && !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia); }
 var SCAN = null;
 function liveScan(o){
   return new Promise(function(resolve){
-    var v = $("scanv"), st = $("scanst"), bar = $("scanbar"), stream = null, timer = 0, done = false, det = null, zx = null, cv = document.createElement("canvas");
+    var v = $("scanv"), st = $("scanst"), bar = $("scanbar"), stream = null, timer = 0, done = false, det = null, zx = null, cv = document.createElement("canvas"), n = 0, t0 = 0, hinted = false;
     function finish(val){
       if (done) return; done = true; clearTimeout(timer);
       try { stream && stream.getTracks().forEach(function(t){ t.stop(); }); } catch (e) {}
@@ -1040,17 +1055,12 @@ function liveScan(o){
       else if (a === "torch" && stream) { var t = stream.getVideoTracks()[0]; b.classList.toggle("pri"); t.applyConstraints({ advanced: [{ torch: b.classList.contains("pri") }] }).catch(function(){}); }
     };
     if ("BarcodeDetector" in window) { try { det = new BarcodeDetector(); } catch (e) {} }
-    if (!det && window.ZXing) {
-      var hints = new Map();
-      hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, o.qr ? [ZXing.BarcodeFormat.QR_CODE] :
-        [ZXing.BarcodeFormat.CODABAR, ZXing.BarcodeFormat.CODE_128, ZXing.BarcodeFormat.ITF, ZXing.BarcodeFormat.CODE_39, ZXing.BarcodeFormat.QR_CODE]);
-      hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
-      zx = new ZXing.MultiFormatReader(); zx.setHints(hints);
-    }
+    if (!det && window.ZXing) zx = zxReader(o.qr);
     navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false }).then(function(s){
       if (done) { s.getTracks().forEach(function(t){ t.stop(); }); return; }
       stream = s; v.srcObject = s; v.play().catch(function(){});
-      st.textContent = o.title;
+      st.textContent = o.title; t0 = Date.now();
+      try { s.getVideoTracks()[0].applyConstraints({ advanced: [{ focusMode: "continuous" }] }).catch(function(){}); } catch (e) {}
       try { var cap = s.getVideoTracks()[0].getCapabilities(); if (cap && cap.torch) bar.querySelector('[data-sc="torch"]').style.display = ""; } catch (e) {}
       tick();
     }).catch(function(e){
@@ -1064,17 +1074,28 @@ function liveScan(o){
           if (det) {
             (await det.detect(v)).forEach(function(b){ if (!hit) hit = o.pick(b.rawValue); });
           } else if (zx) {
-            var w = Math.min(1280, v.videoWidth), h = Math.round(v.videoHeight * w / v.videoWidth);
-            cv.width = w; cv.height = h; cv.getContext("2d").drawImage(v, 0, 0, w, h);
-            try {
-              var r = zx.decode(new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(new ZXing.HTMLCanvasElementLuminanceSource(cv))));
-              hit = o.pick(r.getText());
-            } catch (x) {}
+            // 枠の中を元の解像度で切り出す回と、全体を見る回を交互に（細いバーは縮小すると潰れる）
+            var src = (n++ % 3 !== 2) ? guideRect() : { x: 0, y: 0, w: v.videoWidth, h: v.videoHeight };
+            var w = Math.min(1280, src.w), h = Math.round(src.h * w / src.w);
+            cv.width = w; cv.height = h; cv.getContext("2d").drawImage(v, src.x, src.y, src.w, src.h, 0, 0, w, h);
+            hit = zxTry(zx, cv, o.pick);
           }
         } catch (e) {}
       }
       if (hit) { if (navigator.vibrate) navigator.vibrate(40); finish(hit); return; }
-      timer = setTimeout(tick, det ? 120 : 220);
+      if (!hinted && t0 && Date.now() - t0 > 10000) { hinted = true; st.textContent = o.qr ? "QRを枠いっぱいに入れてください" : "バーコードを横向きにして枠いっぱいに。読めなければ「写真で撮る」か番号を手入力"; }
+      timer = setTimeout(tick, det ? 120 : 150);
+    }
+    /** 画面の枠（.guide）に映っている範囲を動画の座標で返す（object-fit:cover を考慮、少し広めに） */
+    function guideRect(){
+      var vr = v.getBoundingClientRect(), g = $("scan").querySelector(".guide").getBoundingClientRect();
+      var s = Math.max(vr.width / v.videoWidth, vr.height / v.videoHeight);
+      var ox = (vr.width - v.videoWidth * s) / 2, oy = (vr.height - v.videoHeight * s) / 2;
+      var x = (g.left - vr.left - ox) / s, y = (g.top - vr.top - oy) / s, w = g.width / s, h = g.height / s;
+      x -= w * 0.05; w *= 1.1; y -= h * 0.25; h *= 1.5;
+      x = Math.max(0, x); y = Math.max(0, y);
+      w = Math.min(v.videoWidth - x, w); h = Math.min(v.videoHeight - y, h);
+      return w > 50 && h > 20 ? { x: x, y: y, w: w, h: h } : { x: 0, y: 0, w: v.videoWidth, h: v.videoHeight };
     }
   });
 }
