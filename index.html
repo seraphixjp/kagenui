@@ -201,7 +201,8 @@ header{padding-top:calc(10px + env(safe-area-inset-top))}
 #scan .bar button.pri{background:var(--kg);color:#0a0c10;border:none;font-weight:700}
 .qrbox{background:#fff;border-radius:14px;padding:14px;margin:10px auto;max-width:260px}
 .qrbox svg{display:block;width:100%;height:auto}
-body.chiba #nav button:not([data-v="cb"]){display:none}
+body.chiba #nav button:not([data-v="cb"]):not([data-v="today"]){display:none}
+body.chiba #nav button[data-v="cb"]{order:-1}
 #err{display:none;margin:16px;padding:12px;border-radius:12px;border:1px solid rgba(248,113,113,.4);color:var(--neg);font-size:13px}
 </style>
 </head>
@@ -244,7 +245,7 @@ body.chiba #nav button:not([data-v="cb"]){display:none}
 </main>
 
 <nav><div class="wrap" id="nav">
-  <button data-v="today" class="on"><svg viewBox="0 0 24 24"><path d="M3 7h11v9H3zM14 10h4l3 3v3h-7"/><circle cx="7" cy="18" r="1.8"/><circle cx="17" cy="18" r="1.8"/></svg>今日出荷<span class="badge" id="b-today" style="display:none"></span></button>
+  <button data-v="today" class="on"><svg viewBox="0 0 24 24"><path d="M3 7h11v9H3zM14 10h4l3 3v3h-7"/><circle cx="7" cy="18" r="1.8"/><circle cx="17" cy="18" r="1.8"/></svg><span id="l-today">今日出荷</span><span class="badge" id="b-today" style="display:none"></span></button>
   <button data-v="cb"><svg viewBox="0 0 24 24"><path d="M4 21V9l8-5 8 5v12"/><path d="M9 21v-6h6v6"/></svg>千葉出荷<span class="badge" id="b-cb" style="display:none"></span></button>
   <button data-v="bo"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>BO<span class="badge" id="b-bo" style="display:none"></span></button>
   <button data-v="stock"><svg viewBox="0 0 24 24"><path d="M3 8l9-5 9 5v8l-9 5-9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>在庫</button>
@@ -330,6 +331,7 @@ function init(){
   $("err").style.display = "none";
   CHIBA = D.role === "chiba";
   document.body.classList.toggle("chiba", CHIBA);
+  $("l-today").textContent = CHIBA ? "群馬出荷" : "今日出荷";
   if (CHIBA && view !== "cb") { view = "cb"; show("cb"); }
   BY = {}; UN = {};
   D.items.forEach(function(r){ BY[r[0]] = r; });
@@ -351,7 +353,7 @@ function init(){
 function updateBadges(){
   var P = shipPlan(), packed = getPacked();
   var sent = getSent();
-  badge("b-today", P.gm.filter(function(x){ return !packed[x.key] && !sent[x.key]; }).length);
+  badge("b-today", CHIBA ? 0 : P.gm.filter(function(x){ return !packed[x.key] && !sent[x.key]; }).length);
   badge("b-cb", CHIBA ? P.cb.filter(function(x){ return !packed[x.key] && !sent[x.key]; }).length :
     P.cb.filter(function(x){ return x.bo || daysAgo(String(x.o.d).slice(0, 10)) >= 3; }).length);
   badge("b-bo", P.wait.filter(function(b){ return b.due && daysAgo(b.due) > 0; }).length);
@@ -474,6 +476,7 @@ function stampNote(){ return D.planAt ? '<div class="foot" style="margin:0 2px 1
 
 /** 今日出荷（群馬から自分で出すもの） */
 function renderToday(){
+  if (CHIBA) return renderGmView();
   var P = shipPlan(), packed = getPacked(), h = stampNote();
   if (P.gm.length) h += '<button class="prbtn" data-print="1">&#128424; 伝票用リストを印刷（住所・電話つき）</button>';
   var sent = getSent(), trs = getTr();
@@ -494,6 +497,17 @@ function renderToday(){
   P.gm.forEach(function(x){ h += ordCard(x, "gm", packed, sent, trs); });
   h += unknownBlock(P);
   h += '<div class="foot">チェックはこのスマホの中だけに残ります（日付が変わるとリセット）。お客様への発送連絡はWixで追跡番号を入れたときに飛びます。' + (P.shippedPartial ? '一部発送済みの注文で先に出た明細 ' + P.shippedPartial + '件は除いています（' + (/発送記録OK/.test(D.planState || "") ? 'Wixの発送記録で確認' : '発送記録が取れなかったので推定') + '）。' : '') + '</div>';
+  $("v-today").innerHTML = h;
+}
+/** 蔡さん用: 群馬から出す注文を見るだけ（チェック・伝票読取・印刷なし） */
+function renderGmView(){
+  var P = shipPlan(), h = stampNote();
+  if (!P.gm.length) { $("v-today").innerHTML = h + '<div class="empty">群馬から出す注文はありません</div>'; return; }
+  h += '<div class="sec">群馬から出す注文（' + P.gm.length + '件・見るだけ）</div>';
+  P.gm.forEach(function(x){
+    h += '<div class="ord nock ' + (x.bo ? 'bo' : 'gm') + '">' + oHead(x.o, x.bo ? '<span class="tag bo">BO・入荷済み</span>' : '') + x.lines.map(oLine).join("") + '</div>';
+  });
+  h += '<div class="foot">群馬（鈴木さん）が出す分です。こちらでの操作は要りません。出荷されると10分ほどで一覧から消えます。</div>';
   $("v-today").innerHTML = h;
 }
 /** 出荷する注文のカード（タップで梱包チェック → 伝票を読む → 発送登録）。cls＝gm/cb */
