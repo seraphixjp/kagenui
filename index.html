@@ -668,7 +668,8 @@ function updTr(){
 function runServer(fn, args, ok, msg, onErr){
   var S = SEND; S.step = "busy"; S.msg = msg; renderSend();
   var ng = function(e){ if (onErr && SEND === S && onErr(e)) return; S.step = "err"; S.back = S.back || "in"; S.msg = (e && e.message) ? e.message : String(e); beep("ng"); if (SEND === S) renderSend(); };
-  if (!MOCK) call(fn, args).then(function(r){ if (SEND === S) ok(r); }, ng);
+  // 返事を待つ間に小窓を閉じても、登録できた記録（送信済み）だけは残す（2026-10-16 #10286）
+  if (!MOCK) call(fn, args).then(function(r){ if (SEND === S) ok(r); else if (S.bg) S.bg(r); }, ng);
   else setTimeout(function(){   // ローカル確認用
     ok(fn === "orderStatus" ? { no: args[0], url: "https://manage.wix.com/", trackings: S.fakeDone ? [S.tracking] : [] } : true);
   }, 300);
@@ -694,6 +695,7 @@ function saveTracking(){
 }
 function sendNow(){
   var S = SEND; S.back = "in";
+  S.bg = function(){ markSent(S, true); };
   runServer("sendShipment", shipReq(S, false), function(r){
     S.api = true; markSent(S, true); S.step = "ok"; renderSend();
   }, "Wixに発送を登録中…", function(e){
