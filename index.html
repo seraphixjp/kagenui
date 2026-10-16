@@ -1047,9 +1047,31 @@ function zxTry(zx, canvas, pick){
   });
   return hit;
 }
-function canLive(){ return !GAS && !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia); }
+function canLive(){ return !GAS && (!!window.KagenuiNative || !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)); }
+
+/* ---------- APK版（鈴木さん用 2026-10-16）: 読み取りはアプリのML Kitに任せる（ブラウザより速い） ---------- */
+var NSCAN = {};
+function nativeScan(o){
+  return new Promise(function(resolve){
+    var id = "s" + Date.now();
+    NSCAN[id] = { o: o, resolve: resolve };
+    KagenuiNative.scan(id, o.qr ? "qr" : "sagawa", o.title || "", !!o.photo);
+  });
+}
+window.__nativeScan = function(id, v){
+  var s = NSCAN[id]; if (!s) return; delete NSCAN[id];
+  s.resolve(v ? (s.o.pick(v) || "") : "");
+};
+window.__nativePhoto = function(id, dataUrl){        // 「写真で撮る（控え）」→ 文字認識へ
+  var s = NSCAN[id]; if (s) { delete NSCAN[id]; s.resolve(""); }
+  if (!dataUrl || !SEND) return;
+  fetch(dataUrl).then(function(r){ return r.blob(); }).then(function(b){ scanTracking(new File([b], "photo.jpg", { type: "image/jpeg" })); });
+};
+window.__nativeBack = function(){ if (SEND) { closeSend(); return true; } return false; };
+if (window.KagenuiNative) window.print = function(){ KagenuiNative.print(); };
 var SCAN = null;
 function liveScan(o){
+  if (window.KagenuiNative) return nativeScan(o);
   return new Promise(function(resolve){
     var v = $("scanv"), st = $("scanst"), bar = $("scanbar"), stream = null, timer = 0, done = false, det = null, zx = null, cv = document.createElement("canvas"), n = 0, t0 = 0, hinted = false;
     function finish(val){
