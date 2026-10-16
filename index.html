@@ -529,8 +529,19 @@ function unknownBlock(P){
 }
 
 /** 千葉出荷（ティースリーが出すもの） */
+/** 鈴木さん用: 蔡さん等が読んだ伝票番号のうち、Wix画面での入力待ち */
+function waitingBlock(){
+  var W = (!CHIBA && D.waiting) || [];
+  if (!W.length) return '';
+  var h = '<div class="warn" style="margin:0 0 12px"><b>Wixへの手入力待ち ' + W.length + '件</b>（切替前の注文はAPIで登録できないため。Wixに入力すると次の更新で自動で消えます）';
+  W.forEach(function(w, i){
+    h += '<div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="no">#' + esc(w.no) + '</span><span class="num">' + fmtTr(w.tracking) + '</span><span style="opacity:.7">' + esc(w.detail) + ' ・ ' + esc(w.who) + ' ' + esc(w.at) + '</span>' +
+         '<button class="btn" style="font-family:inherit" data-wait="' + i + '">番号をコピーしてWixを開く</button></div>';
+  });
+  return h + '</div>';
+}
 function renderCb(){
-  var P = shipPlan(), h = stampNote();
+  var P = shipPlan(), h = stampNote() + waitingBlock();
   var late = P.cb.filter(function(x){ return !x.bo && daysAgo(String(x.o.d).slice(0, 10)) >= 3; }).length;
   h += '<div class="health"><div><div class="l">千葉の未発送</div><div class="v num">' + P.cb.length + '件</div></div><div><div class="l">3日以上たった</div><div class="v num ' + (late ? 'zn' : 'z0') + '">' + late + '件</div></div><div><div class="l">入荷済みBO</div><div class="v num">' + P.cb.filter(function(x){ return x.bo; }).length + '件</div></div></div>';
   if (!P.cb.length) { $("v-cb").innerHTML = h + '<div class="empty">千葉の未発送はありません</div>'; return; }
@@ -651,7 +662,8 @@ function renderSend(){
     h += '<div class="who" style="margin:8px 0">「送る」を押すとWixに発送が登録され、お客様に発送のお知らせが届きます（Wixのメール設定どおり）。</div>';
     h += '<div class="smbtns"><button data-act="back">戻る</button><button class="pri" data-act="send">送る</button></div>';
   } else if (S.step === "ok") {
-    h += '<div class="okbig">&#10003;</div><div style="text-align:center;font-size:14px">' + (S.api ? 'Wixに発送を登録しました' : 'Wixに入っているのを確認しました') + '</div><div class="trbig num" style="font-size:20px">' + fmtTr(S.tracking) + '</div>';
+    h += '<div class="okbig">&#10003;</div><div style="text-align:center;font-size:14px">' + (S.queued ? '伝票番号を受け付けました' : S.api ? 'Wixに発送を登録しました' : 'Wixに入っているのを確認しました') + '</div><div class="trbig num" style="font-size:20px">' + fmtTr(S.tracking) + '</div>';
+    if (S.queued) h += '<div class="foot" style="text-align:center;margin:4px 0 0">この注文はWixへの登録を鈴木さんが行います（お客様への発送メールはそのときに届きます）。作業はこれで完了です。</div>';
     if (S.x.bo && !CHIBA) h += '<div class="warn">BOの出荷です。入出庫ログに「出荷（BO消込）」を入れてください。</div>';
     h += '<div class="smbtns"><button class="pri" data-act="close">閉じる</button></div>';
   } else if (S.step === "err") {
@@ -695,8 +707,9 @@ function saveTracking(){
 }
 function sendNow(){
   var S = SEND; S.back = "in";
-  S.bg = function(){ markSent(S, true); };
+  S.bg = function(r){ if (r && r.queued && !CHIBA) return; markSent(S, true); };
   runServer("sendShipment", shipReq(S, false), function(r){
+    if (r && r.queued) { queuedDone(S, r); return; }
     S.api = true; markSent(S, true); S.step = "ok"; renderSend();
   }, "Wixに発送を登録中…", function(e){
     var m = (e && e.message) ? e.message : String(e);
@@ -704,6 +717,16 @@ function sendNow(){
     if (CHIBA) { S.step = "err"; S.msg = "この注文はアプリから登録できませんでした。伝票番号を鈴木さんに連絡してください。（" + m + "）"; beep("ng"); renderSend(); return true; }
     manualSave(S, "切替前の注文なのでAPIでは登録できませんでした。Wixの画面で入力してください。"); return true;
   });
+}
+/**
+ * 切替前の注文で、新旧どちらのAPIでも登録できなかったとき（2026-10-16 #10191 #10194 #10197）。
+ * 番号はサーバーの「発送連絡ログ」に預けてあるので、蔡さんの画面はエラーにせず受付済みにする。
+ * 鈴木さんの画面は従来どおり Wix画面で入力 → 確認 の流れへ。
+ */
+function queuedDone(S, r){
+  if (CHIBA) { S.queued = true; markSent(S, true); S.step = "ok"; renderSend(); return; }
+  var t = getTr(); t[S.x.key] = { t: S.tracking, url: r.url }; lsSet("km_tr", t);
+  S.url = r.url; S.step = "go"; S.msg = "この注文は切替前の注文なのでWixの画面で入力してください（番号は預かり済み）。"; beep("scan"); renderSend(); render(); updateBadges();
 }
 /** 番号を保存（その注文のWix画面URLも一緒に取っておく）＝手入力の流れ */
 function manualSave(S, why){
@@ -956,6 +979,7 @@ $("smbox").addEventListener("input", function(e){
 $("cam").addEventListener("change", function(){ var f = this.files && this.files[0]; if (f && SEND) scanTracking(f); });
 $("v-cb").addEventListener("click", function(e){
   var sb = e.target.closest("[data-send]"); if (sb) { openSend(sb.getAttribute("data-send")); return; }
+  var wb = e.target.closest("[data-wait]"); if (wb) { var w = D.waiting[+wb.getAttribute("data-wait")]; if (w) { copyText(w.tracking); window.open(w.url, "_blank"); } return; }
   var pb = e.target.closest("[data-print]"); if (pb) { printLabels(pb); return; }
   if (e.target.closest("[data-unpair]")) { unpair(); return; }
   var r = e.target.closest("[data-pk]"); if (!r) return;
