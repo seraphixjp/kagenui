@@ -855,6 +855,21 @@ function printLabels(btn){
   if (!MOCK) call("getShipLabels", [nos]).then(done, fail);
   else done(list.map(function(x){ return { no: x.o.no, name: x.o.who, phone: "090-0000-0000", zip: "100-0001", addr: x.o.pref + "テスト市1-2-3", addr2: "テストマンション101", ship: x.o.ship, note: "" }; }));
 }
+/* 電話番号を伝票に書き写しやすい国内表記に（+81 90… → 090-xxxx-xxxx）。読めない形はそのまま返す */
+function fmtTel(s){
+  if (!s) return "";
+  var t = String(s).replace(/[０-９＋]/g, function(c){ return String.fromCharCode(c.charCodeAt(0) - 0xFEE0); });
+  var d = t.replace(/[^0-9+]/g, "");
+  if (/^\+?81/.test(d)) { d = d.replace(/^\+?81/, ""); if (d.charAt(0) !== "0") d = "0" + d; }
+  d = d.replace(/\+/g, "");
+  if (!/^0[0-9]{9,10}$/.test(d)) return String(s);
+  if (/^0[5789]0/.test(d) && d.length === 11) return d.slice(0, 3) + "-" + d.slice(3, 7) + "-" + d.slice(7);  // 携帯・050
+  if (/^0120/.test(d) && d.length === 10) return d.slice(0, 4) + "-" + d.slice(4, 7) + "-" + d.slice(7);
+  if (/^0800/.test(d) && d.length === 11) return d.slice(0, 4) + "-" + d.slice(4, 7) + "-" + d.slice(7);
+  if (d.length !== 10) return d;
+  if (/^0[36]/.test(d)) return d.slice(0, 2) + "-" + d.slice(2, 6) + "-" + d.slice(6);              // 東京・大阪
+  return d.slice(0, 3) + "-" + d.slice(3, 6) + "-" + d.slice(6);                                    // 他の固定電話は目安（市外局番の桁数はまちまち）
+}
 function printHtml(list, by, where){
   var today = D.now.slice(0, 10).replace(/-/g, "/");
   var h = '<div class="ph"><b>出荷リスト（' + where + '）</b>　' + today + '　' + list.length + '件</div>';
@@ -863,7 +878,7 @@ function printHtml(list, by, where){
     h += '<div class="pb"><div class="pr1"><span class="pck">□</span><span class="pno">' + (i + 1) + '. #' + esc(x.o.no) + '</span><span>' + md(x.o.d) + ' 受注</span>' + (x.bo ? '<span>【BO入荷分】</span>' : '') + '<span class="psh">' + esc(l.ship || x.o.ship || '') + '</span></div>';
     if (l.zip || l.addr) {
       h += '<div class="pad">〒' + esc(l.zip) + '　' + esc(l.addr) + (l.addr2 ? ' ' + esc(l.addr2) : '') + '</div>';
-      h += '<div class="pnm">' + esc(l.name || x.o.who) + ' 様' + (l.company ? '（' + esc(l.company) + '）' : '') + '<span class="ptel">TEL ' + esc(l.phone || '―') + '</span></div>';
+      h += '<div class="pnm">' + esc(l.name || x.o.who) + ' 様' + (l.company ? '（' + esc(l.company) + '）' : '') + '<span class="ptel">TEL ' + esc(fmtTel(l.phone) || '―') + '</span></div>';
     } else {
       h += '<div class="pad">（宛先をWixから取得できませんでした。Wixの注文画面で確認）　' + esc(x.o.who) + ' 様 ・ ' + esc(x.o.pref) + '</div>';
     }
